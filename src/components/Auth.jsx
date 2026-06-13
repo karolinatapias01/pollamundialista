@@ -96,7 +96,7 @@ const Auth = ({ onLogin, onRegister, users }) => {
             ¡Registro exitoso!
           </h2>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.6', marginBottom: '24px' }}>
-            Tu cuenta está pendiente de aprobación. El administrador te activará una vez confirme tu pago de <strong style={{ color: 'white' }}>$10.000</strong>.
+            Tu cuenta está pendiente de aprobación. El administrador te activará una vez confirme tu pago de <strong style={{ color: 'white' }}>$15.000</strong>.
           </p>
           <div style={{ padding: '16px', borderRadius: '14px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)', marginBottom: '28px' }}>
             <div style={{ fontSize: '14px', color: '#fb923c', fontWeight: '600', marginBottom: '6px' }}>¿Ya pagaste?</div>
