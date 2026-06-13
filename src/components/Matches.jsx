@@ -27,6 +27,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
   const [viewMode,      setViewMode]      = useState('date');
   const [predictions,   setPredictions]   = useState({});
   const [showReactions, setShowReactions] = useState({});
+  const [saving, setSaving] = useState({});
 
   const phases = [
     { id:'groups',   label:'⚽ Grupos'  },
@@ -83,15 +84,22 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
   const setPredField = (matchId, field, value) =>
     setPredictions(prev=>({...prev,[matchId]:{...prev[matchId],[field]:value}}));
 
-    const handleSubmit = (matchId) => {
-      const p = predictions[matchId]||{};
-      if (!p.result && p.home===undefined) { alert('Selecciona Gana/Empate/Pierde o ingresa un marcador'); return; }
-      const result = p.result||(p.home>p.away?'home':p.home<p.away?'away':'draw');
-      const homeScore = p.home !== undefined ? parseInt(p.home) : undefined;
-      const awayScore = p.away !== undefined ? parseInt(p.away) : undefined;
-      onMakePrediction(currentUser.id, matchId, result, homeScore, awayScore);
+  const handleSubmit = async (matchId) => {
+    const p = predictions[matchId]||{};
+    if (!p.result && p.home===undefined) { alert('Selecciona Gana/Empate/Pierde o ingresa un marcador'); return; }
+    const result = p.result||(p.home>p.away?'home':p.home<p.away?'away':'draw');
+    const homeScore = p.home !== undefined ? parseInt(p.home) : undefined;
+    const awayScore = p.away !== undefined ? parseInt(p.away) : undefined;
+    setSaving(prev=>({...prev,[matchId]:true}));
+    try {
+      await onMakePrediction(currentUser.id, matchId, result, homeScore, awayScore);
       setPredictions(prev=>{ const n={...prev}; delete n[matchId]; return n; });
-    };
+    } catch(e) {
+      alert('Error al guardar. Intente de nuevo.');
+    } finally {
+      setSaving(prev=>({...prev,[matchId]:false}));
+    }
+  };
 
   const toggleReactionPicker = (matchId) => setShowReactions(prev=>({...prev,[matchId]:!prev[matchId]}));
   const handleReaction = (matchId, emoji) => {
@@ -192,6 +200,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
           const isFinished=match.status==='finished';
           const reactionCounts=getReactionCounts(match.id);
           const localPred=predictions[match.id]||{};
+          const isSaving=saving[match.id];
 
           return (
             <div key={match.id} style={{...card,padding:'18px 20px',position:'relative',overflow:'hidden'}}>
@@ -223,7 +232,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                     <div style={{fontSize:'28px',fontWeight:'800',color:'white',letterSpacing:'-1px'}}>
                       {match.homeScore} <span style={{color:'rgba(255,255,255,0.3)'}}>-</span> {match.awayScore}
                     </div>
-                  ):userPred?(
+                  ):userPred&&!predictions[match.id]?(
                     <div>
                       {userPred.homeScore!==undefined&&userPred.awayScore!==undefined?(
                         <div style={{fontSize:'22px',fontWeight:'700',color:'#4ade80'}}>{userPred.homeScore} - {userPred.awayScore}</div>
@@ -291,7 +300,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                                   ?<img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={18} height={18} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
                                   :<span style={{fontSize:'14px'}}>{user.avatar||'👤'}</span>
                                 }
-                                <span style={{color:'rgba(255,255,255,0.7)',flex:1}}>{user.nickname||user.name}</span>
+                                <span style={{color:'rgba(255,255,255,0.7)',flex:1}}>{user.name}{user.nickname?` "${user.nickname}"`:''}</span>
                                 <span style={{color:'rgba(255,255,255,0.5)'}}>
                                   {pred.homeScore!==undefined?`${pred.homeScore}-${pred.awayScore}`:pred.result==='home'?`Gana ${homeTeam?.name}`:pred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
                                 </span>
@@ -390,9 +399,9 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                             style={{width:'54px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',color:'white'}}/>
                         </div>
                       </div>
-                      <button onClick={()=>handleSubmit(match.id)}
-                        style={{width:'100%',padding:'10px',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'white',fontWeight:'600',fontSize:'14px',borderRadius:'10px',border:'none',cursor:'pointer'}}>
-                        Guardar Pronóstico
+                      <button onClick={()=>handleSubmit(match.id)} disabled={isSaving}
+                        style={{width:'100%',padding:'10px',background:isSaving?'rgba(255,255,255,0.1)':'linear-gradient(135deg,#16a34a,#15803d)',color:'white',fontWeight:'600',fontSize:'14px',borderRadius:'10px',border:'none',cursor:isSaving?'default':'pointer'}}>
+                        {isSaving ? '⏳ Guardando...' : 'Guardar Pronóstico'}
                       </button>
                     </div>
                   )}
