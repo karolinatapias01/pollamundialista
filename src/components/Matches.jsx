@@ -201,6 +201,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
           const reactionCounts=getReactionCounts(match.id);
           const localPred=predictions[match.id]||{};
           const isSaving=saving[match.id];
+          const isApproved=currentUser.approved||currentUser.isAdmin;
 
           return (
             <div key={match.id} style={{...card,padding:'18px 20px',position:'relative',overflow:'hidden'}}>
@@ -346,7 +347,17 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                 </div>
               )}
 
-              {!isFinished&&canPred&&(
+              {/* No aprobado */}
+              {!isFinished&&canPred&&!isApproved&&(
+                <div style={{padding:'14px',borderRadius:'12px',background:'rgba(249,115,22,0.08)',border:'1px solid rgba(249,115,22,0.2)',textAlign:'center'}}>
+                  <div style={{fontSize:'24px',marginBottom:'8px'}}>⏳</div>
+                  <div style={{fontSize:'14px',fontWeight:'600',color:'#fb923c',marginBottom:'4px'}}>Cuenta pendiente de aprobación</div>
+                  <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)'}}>El administrador debe aprobar tu cuenta para poder pronosticar</div>
+                </div>
+              )}
+
+              {/* Aprobado — formulario */}
+              {!isFinished&&canPred&&isApproved&&(
                 <div style={{padding:'14px',borderRadius:'12px',background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.15)'}}>
                   {userPred&&!predictions[match.id]?(
                     <div style={{textAlign:'center'}}>
@@ -401,7 +412,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                       </div>
                       <button onClick={()=>handleSubmit(match.id)} disabled={isSaving}
                         style={{width:'100%',padding:'10px',background:isSaving?'rgba(255,255,255,0.1)':'linear-gradient(135deg,#16a34a,#15803d)',color:'white',fontWeight:'600',fontSize:'14px',borderRadius:'10px',border:'none',cursor:isSaving?'default':'pointer'}}>
-                        {isSaving ? '⏳ Guardando...' : 'Guardar Pronóstico'}
+                        {isSaving?'⏳ Guardando...':'Guardar Pronóstico'}
                       </button>
                     </div>
                   )}

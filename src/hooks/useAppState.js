@@ -71,6 +71,7 @@ const useAppState = () => {
       points: 0,
       predictions: {},
       groupPredictions: {},
+      approved: users.length === 0, // El primer usuario (admin) se aprueba automáticamente
       stats: {
         correctPredictions: 0,
         incorrectPredictions: 0,
@@ -86,11 +87,21 @@ const useAppState = () => {
     return newUser;
   };
 
+  const approveUser = async (userId) => {
+    await updateDoc(doc(db, 'users', userId), { approved: true });
+  };
+
+  const rejectUser = async (userId) => {
+    await deleteDoc(doc(db, 'users', userId));
+  };
+
   const makePrediction = async (userId, matchId, result, homeScore, awayScore) => {
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) return;
     const user = userSnap.data();
+
+    if (!user.approved) throw new Error('Usuario no aprobado');
 
     const prediction = { result };
     if (homeScore !== undefined && homeScore !== null && !isNaN(homeScore)) {
@@ -115,6 +126,7 @@ const useAppState = () => {
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) return;
     const user = userSnap.data();
+    if (!user.approved) throw new Error('Usuario no aprobado');
     const updatedGroupPredictions = {
       ...(user.groupPredictions || {}),
       [group]: { first, second }
@@ -264,7 +276,8 @@ const useAppState = () => {
     setCurrentUser, registerUser, makePrediction,
     saveGroupPrediction, updateMatchResult,
     updateGroupResult, updateChampion,
-    addReaction, removeReaction, deleteUser
+    addReaction, removeReaction, deleteUser,
+    approveUser, rejectUser
   };
 };
 

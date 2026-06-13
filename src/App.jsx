@@ -20,7 +20,8 @@ function App() {
     setCurrentUser, registerUser, makePrediction,
     saveGroupPrediction, updateMatchResult,
     updateGroupResult, updateChampion,
-    addReaction, removeReaction, deleteUser
+    addReaction, removeReaction, deleteUser,
+    approveUser, rejectUser
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState('home');
@@ -55,6 +56,31 @@ function App() {
         <div style={{ textAlign:'center' }}>
           <div style={{ fontSize:'40px', marginBottom:'16px' }}>⚽</div>
           <div style={{ color:'rgba(255,255,255,0.5)', fontSize:'15px' }}>Cargando PollaMundialista...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pantalla de espera para usuarios no aprobados
+  if (!currentUser.approved && !currentUser.isAdmin) {
+    return (
+      <div style={{ minHeight:'100vh', background:'#0a0e1a', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
+        <div style={{ textAlign:'center', maxWidth:'380px' }}>
+          <div style={{ fontSize:'56px', marginBottom:'20px' }}>⏳</div>
+          <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>
+            ¡Ya casi!
+          </div>
+          <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.6)', lineHeight:'1.6', marginBottom:'24px' }}>
+            Tu cuenta está pendiente de aprobación. El administrador te activará una vez confirme tu pago.
+          </div>
+          <div style={{ padding:'16px', borderRadius:'14px', background:'rgba(249,115,22,0.1)', border:'1px solid rgba(249,115,22,0.2)', marginBottom:'24px' }}>
+            <div style={{ fontSize:'13px', color:'#fb923c', fontWeight:'600', marginBottom:'4px' }}>¿Ya pagaste?</div>
+            <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.45)' }}>Avísale al administrador para que apruebe tu cuenta</div>
+          </div>
+          <button onClick={() => setCurrentUser(null)}
+            style={{ fontSize:'14px', color:'rgba(255,255,255,0.4)', background:'none', border:'none', cursor:'pointer' }}>
+            Salir
+          </button>
         </div>
       </div>
     );
@@ -146,7 +172,7 @@ function App() {
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
         {activeTab==='news'    && <News/>}
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users} onDeleteUser={deleteUser}/>}
+        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser}/>}
       </main>
 
       <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:40, background:'#0f1a0f', borderTop:'1px solid rgba(255,255,255,0.1)' }}>

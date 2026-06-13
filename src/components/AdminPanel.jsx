@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, X, Edit2, AlertCircle, Trash2 } from 'lucide-react';
+import { Save, X, Edit2, AlertCircle, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { getTeamById, teams } from '../data/teams';
 import { matches as allMatches } from '../data/matches';
 
@@ -19,19 +19,20 @@ const getTeamsByGroup = (group) => {
   return [...ids].map(id => getTeamById(id)).filter(Boolean);
 };
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser }) => {
-  const [activeSection, setActiveSection] = useState('matches');
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser, onApproveUser, onRejectUser }) => {
+  const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
   const [filter, setFilter] = useState('pending');
-
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [groupFirst, setGroupFirst] = useState('');
   const [groupSecond, setGroupSecond] = useState('');
-
   const [championId, setChampionId] = useState('');
   const [championSaved, setChampionSaved] = useState(false);
+
+  const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
+  const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
 
   const filteredMatches = matches.filter(m => {
     if (filter==='pending') return m.status !== 'finished';
@@ -44,15 +45,57 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
 
   const inputStyle = { width:'56px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'2px solid rgba(168,85,247,0.4)',color:'white',outline:'none' };
 
-  const sectionBtn = (id, label, emoji) => (
+  const sectionBtn = (id, label, emoji, badge) => (
     <button onClick={() => setActiveSection(id)}
-      style={{padding:'8px 14px', borderRadius:'10px', fontSize:'13px', fontWeight:'500', cursor:'pointer',
+      style={{padding:'8px 14px', borderRadius:'10px', fontSize:'13px', fontWeight:'500', cursor:'pointer', position:'relative',
         background: activeSection===id ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
         border: activeSection===id ? '1px solid rgba(168,85,247,0.4)' : '1px solid rgba(255,255,255,0.08)',
         color: activeSection===id ? '#c084fc' : 'rgba(255,255,255,0.5)'}}>
       {emoji} {label}
+      {badge > 0 && (
+        <span style={{position:'absolute',top:'-6px',right:'-6px',background:'#ef4444',color:'white',borderRadius:'50%',width:'18px',height:'18px',fontSize:'11px',fontWeight:'700',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          {badge}
+        </span>
+      )}
     </button>
   );
+
+  const UserCard = ({ user }) => {
+    const team = getTeamById(user.avatar);
+    return (
+      <div style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)'}}>
+        {team?.flagCode
+          ? <img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={32} height={32} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
+          : <span style={{fontSize:'24px'}}>{user.avatar||'👤'}</span>
+        }
+        <div style={{flex:1}}>
+          <div style={{fontSize:'14px',fontWeight:'600',color:'white'}}>
+            {user.name}{user.nickname?` "${user.nickname}"`:''} 
+          </div>
+          <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>
+            {user.points||0} pts · {Object.keys(user.predictions||{}).length} pronósticos
+          </div>
+        </div>
+        <div style={{display:'flex',gap:'6px'}}>
+          {!user.approved && (
+            <button onClick={()=>onApproveUser(user.id)}
+              style={{padding:'8px 12px',borderRadius:'10px',background:'rgba(22,163,74,0.15)',border:'1px solid rgba(22,163,74,0.3)',color:'#4ade80',cursor:'pointer',display:'flex',alignItems:'center',gap:'5px',fontSize:'13px',fontWeight:'500'}}>
+              <CheckCircle size={14}/> Aprobar
+            </button>
+          )}
+          {!user.isAdmin && (
+            <button onClick={()=>{
+              if(!confirm(`¿Eliminar a ${user.name}?`)) return;
+              onDeleteUser(user.id);
+            }}
+              style={{padding:'8px 12px',borderRadius:'10px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.25)',color:'#f87171',cursor:'pointer',display:'flex',alignItems:'center',gap:'5px',fontSize:'13px',fontWeight:'500'}}>
+              <Trash2 size={14}/>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
@@ -64,11 +107,32 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
       </div>
 
       <div style={{...card,padding:'12px 14px',display:'flex',gap:'8px',overflowX:'auto'}}>
+        {sectionBtn('pending','Pendientes','⏳', pendingUsers.length)}
         {sectionBtn('matches','Partidos','⚽')}
         {sectionBtn('groups','Clasificados','📊')}
         {sectionBtn('champion','Campeón','🏆')}
         {sectionBtn('users','Usuarios','👥')}
       </div>
+
+      {/* PENDIENTES */}
+      {activeSection==='pending' && (
+        <div style={{...card,padding:'20px'}}>
+          <div style={{marginBottom:'16px'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>⏳ Usuarios pendientes de aprobación</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Aprueba solo a quienes hayan pagado</p>
+          </div>
+          {pendingUsers.length === 0 ? (
+            <div style={{textAlign:'center',padding:'32px',color:'rgba(255,255,255,0.35)',fontSize:'14px'}}>
+              <div style={{fontSize:'32px',marginBottom:'10px'}}>✅</div>
+              No hay usuarios pendientes
+            </div>
+          ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+              {pendingUsers.map(user => <UserCard key={user.id} user={user}/>)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* PARTIDOS */}
       {activeSection==='matches' && (
@@ -84,7 +148,6 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               </button>
             ))}
           </div>
-
           <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
             {filteredMatches.map(match=>{
               const homeTeam=getTeamById(match.homeTeam);
@@ -255,37 +318,12 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
       {activeSection==='users' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
-            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>👥 Gestionar usuarios</h3>
-            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Elimina usuarios de la polla</p>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>👥 Usuarios aprobados</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Jugadores activos en la polla</p>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-            {users.map(user=>{
-              const team = getTeamById(user.avatar);
-              return(
-                <div key={user.id} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)'}}>
-                  {team?.flagCode
-                    ? <img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={32} height={32} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
-                    : <span style={{fontSize:'24px'}}>{user.avatar||'👤'}</span>
-                  }
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:'14px',fontWeight:'600',color:'white'}}>
-                      {user.name}{user.nickname?` "${user.nickname}"`:''} 
-                      {user.isAdmin&&<span style={{fontSize:'10px',background:'rgba(168,85,247,0.2)',color:'#c084fc',padding:'1px 6px',borderRadius:'4px',marginLeft:'6px'}}>admin</span>}
-                    </div>
-                    <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>{user.points||0} pts · {Object.keys(user.predictions||{}).length} pronósticos</div>
-                  </div>
-                  {!user.isAdmin && (
-                    <button onClick={()=>{
-                      if(!confirm(`¿Eliminar a ${user.name}? Esta acción no se puede deshacer.`)) return;
-                      onDeleteUser(user.id);
-                    }}
-                      style={{padding:'8px 12px',borderRadius:'10px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.25)',color:'#f87171',cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',fontWeight:'500'}}>
-                      <Trash2 size={14}/> Eliminar
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            {approvedUsers.map(user => <UserCard key={user.id} user={user}/>)}
+            {approvedUsers.length===0&&<div style={{textAlign:'center',padding:'24px',color:'rgba(255,255,255,0.35)',fontSize:'14px'}}>No hay usuarios aprobados aún</div>}
           </div>
         </div>
       )}
@@ -294,10 +332,9 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         <div style={{display:'flex',gap:'8px',alignItems:'flex-start'}}>
           <AlertCircle size={15} style={{color:'#93c5fd',flexShrink:0,marginTop:'1px'}}/>
           <ul style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',lineHeight:'1.8',listStyle:'none'}}>
-            <li>• Los puntos se actualizan al guardar resultado</li>
-            <li>• Los clasificados se calculan cuando ingresas 1° y 2°</li>
-            <li>• El campeón solo se puede ingresar una vez</li>
-            <li>• No se puede eliminar al administrador</li>
+            <li>• Aprueba solo usuarios que hayan pagado</li>
+            <li>• Los pendientes no pueden pronosticar</li>
+            <li>• El número rojo en ⏳ indica cuántos esperan aprobación</li>
           </ul>
         </div>
       </div>
