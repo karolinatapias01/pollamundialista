@@ -14,6 +14,73 @@ import useAppState from './hooks/useAppState';
 import { startAutoSync } from './syncService';
 import { startNotifications } from './notifications';
 
+// Pantalla de tiempo de prueba
+const PendingScreen = ({ currentUser, onLogout, onContinue }) => {
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const registered = parseInt(currentUser.id);
+    const elapsed = Math.floor((Date.now() - registered) / 1000);
+    return Math.max(0, 300 - elapsed);
+  });
+  const [expired, setExpired] = useState(() => {
+    const registered = parseInt(currentUser.id);
+    const elapsed = Math.floor((Date.now() - registered) / 1000);
+    return elapsed >= 300;
+  });
+
+  useEffect(() => {
+    if (expired) return;
+    if (timeLeft <= 0) { setExpired(true); return; }
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) { setExpired(true); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [expired]);
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+
+  if (expired) {
+    return (
+      <div style={{ minHeight:'100vh', background:'#0a0e1a', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
+        <div style={{ textAlign:'center', maxWidth:'380px' }}>
+          <div style={{ fontSize:'56px', marginBottom:'20px' }}>⏳</div>
+          <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>
+            Tiempo de prueba terminado
+          </div>
+          <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.6)', lineHeight:'1.6', marginBottom:'24px' }}>
+            Espero que te haya gustado la app. Para activar tu cuenta y empezar a pronosticar avísale al administrador que ya pagaste.
+          </div>
+          <div style={{ padding:'16px', borderRadius:'14px', background:'rgba(249,115,22,0.1)', border:'1px solid rgba(249,115,22,0.2)', marginBottom:'24px' }}>
+            <div style={{ fontSize:'13px', color:'#fb923c', fontWeight:'600', marginBottom:'4px' }}>Tu nombre registrado:</div>
+            <div style={{ fontSize:'15px', color:'white', fontWeight:'700' }}>{currentUser.name}</div>
+          </div>
+          <button onClick={onLogout}
+            style={{ padding:'12px 32px', background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', color:'white', fontSize:'14px', fontWeight:'600', borderRadius:'12px', cursor:'pointer' }}>
+            Salir
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Banner que se muestra arriba mientras exploran
+  return (
+    <div style={{ position:'fixed', top:0, left:0, right:0, zIndex:1000, background:'rgba(249,115,22,0.95)', padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', backdropFilter:'blur(10px)' }}>
+      <div style={{ fontSize:'13px', color:'white', fontWeight:'500' }}>
+        ⏱️ Modo prueba — No puedes pronosticar aún
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+        <div style={{ fontSize:'15px', fontWeight:'800', color:'white', background:'rgba(0,0,0,0.2)', padding:'4px 12px', borderRadius:'8px' }}>
+          {minutes}:{seconds.toString().padStart(2,'0')}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const {
     currentUser, users, matches, reactions, loading,
@@ -29,6 +96,7 @@ function App() {
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('polla_tutorial_done');
   });
+  const [trialExpired, setTrialExpired] = useState(false);
 
   const handleFinishTutorial = () => {
     localStorage.setItem('polla_tutorial_done', 'true');
@@ -46,6 +114,17 @@ function App() {
     return () => clearInterval(interval);
   }, [matches, currentUser]);
 
+  // Verificar si el tiempo de prueba expiró
+  useEffect(() => {
+    if (!currentUser || currentUser.approved || currentUser.isAdmin) return;
+    const registered = parseInt(currentUser.id);
+    const elapsed = Math.floor((Date.now() - registered) / 1000);
+    if (elapsed >= 300) { setTrialExpired(true); return; }
+    const remaining = 300 - elapsed;
+    const timeout = setTimeout(() => setTrialExpired(true), remaining * 1000);
+    return () => clearTimeout(timeout);
+  }, [currentUser]);
+
   if (!currentUser) {
     return <Auth onLogin={setCurrentUser} onRegister={registerUser} users={users} />;
   }
@@ -61,24 +140,24 @@ function App() {
     );
   }
 
-  // Pantalla de espera para usuarios no aprobados
-  if (!currentUser.approved && !currentUser.isAdmin) {
+  // Si tiempo expiró mostrar pantalla de salida
+  if (trialExpired && !currentUser.approved && !currentUser.isAdmin) {
     return (
       <div style={{ minHeight:'100vh', background:'#0a0e1a', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
         <div style={{ textAlign:'center', maxWidth:'380px' }}>
           <div style={{ fontSize:'56px', marginBottom:'20px' }}>⏳</div>
           <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>
-            ¡Ya casi!
+            Tiempo de prueba terminado
           </div>
           <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.6)', lineHeight:'1.6', marginBottom:'24px' }}>
-            Tu cuenta está pendiente de aprobación. El administrador te activará una vez confirme tu pago.
+            Espero que te haya gustado la app. Para activar tu cuenta y empezar a pronosticar avísale al administrador que ya pagaste.
           </div>
           <div style={{ padding:'16px', borderRadius:'14px', background:'rgba(249,115,22,0.1)', border:'1px solid rgba(249,115,22,0.2)', marginBottom:'24px' }}>
-            <div style={{ fontSize:'13px', color:'#fb923c', fontWeight:'600', marginBottom:'4px' }}>¿Ya pagaste?</div>
-            <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.45)' }}>Avísale al administrador para que apruebe tu cuenta</div>
+            <div style={{ fontSize:'13px', color:'#fb923c', fontWeight:'600', marginBottom:'4px' }}>Tu nombre registrado:</div>
+            <div style={{ fontSize:'15px', color:'white', fontWeight:'700' }}>{currentUser.name}</div>
           </div>
           <button onClick={() => setCurrentUser(null)}
-            style={{ fontSize:'14px', color:'rgba(255,255,255,0.4)', background:'none', border:'none', cursor:'pointer' }}>
+            style={{ padding:'12px 32px', background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', color:'white', fontSize:'14px', fontWeight:'600', borderRadius:'12px', cursor:'pointer' }}>
             Salir
           </button>
         </div>
@@ -105,12 +184,22 @@ function App() {
     { id:'news',    label:'Noticias',   emoji:'📰' },
   ];
 
+  const isPending = !currentUser.approved && !currentUser.isAdmin;
+
   return (
     <div style={{ minHeight:'100vh', background:'#0a0e1a' }}>
 
+      {/* Banner de tiempo de prueba */}
+      {isPending && !trialExpired && (
+        <PendingScreen
+          currentUser={currentUser}
+          onLogout={() => setCurrentUser(null)}
+        />
+      )}
+
       {showTutorial && currentUser && <Tutorial onFinish={handleFinishTutorial}/>}
 
-      <header style={{ background:'linear-gradient(135deg,#0f1f0f 0%,#0a1628 50%,#1a0a28 100%)', borderBottom:'1px solid rgba(255,255,255,0.08)', position:'sticky', top:0, zIndex:50 }}>
+      <header style={{ background:'linear-gradient(135deg,#0f1f0f 0%,#0a1628 50%,#1a0a28 100%)', borderBottom:'1px solid rgba(255,255,255,0.08)', position:'sticky', top: isPending ? '44px' : 0, zIndex:50 }}>
         <div style={{ maxWidth:'900px', margin:'0 auto', padding:'0 16px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', height:'64px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
@@ -126,7 +215,7 @@ function App() {
                 <span style={{ fontSize:'18px' }}>{currentUser.avatar?.length<=2?currentUser.avatar:'👤'}</span>
                 <div>
                   <p style={{ fontSize:'12px', fontWeight:'600', color:'white', lineHeight:1 }}>{currentUser.nickname||currentUser.name}</p>
-                  <p style={{ fontSize:'11px', color:'#4ade80', marginTop:'2px' }}>{currentUser.points||0} pts</p>
+                  <p style={{ fontSize:'11px', color: isPending?'#fb923c':'#4ade80', marginTop:'2px' }}>{isPending?'⏳ Pendiente':currentUser.points+' pts'}</p>
                 </div>
               </div>
               <button onClick={()=>{ if(confirm('¿Salir?')) setCurrentUser(null); }}
