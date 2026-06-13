@@ -14,8 +14,7 @@ import useAppState from './hooks/useAppState';
 import { startAutoSync } from './syncService';
 import { startNotifications } from './notifications';
 
-// Pantalla de tiempo de prueba
-const PendingScreen = ({ currentUser, onLogout, onContinue }) => {
+const PendingScreen = ({ currentUser, onLogout }) => {
   const [timeLeft, setTimeLeft] = useState(() => {
     const registered = parseInt(currentUser.id);
     const elapsed = Math.floor((Date.now() - registered) / 1000);
@@ -47,9 +46,7 @@ const PendingScreen = ({ currentUser, onLogout, onContinue }) => {
       <div style={{ minHeight:'100vh', background:'#0a0e1a', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
         <div style={{ textAlign:'center', maxWidth:'380px' }}>
           <div style={{ fontSize:'56px', marginBottom:'20px' }}>⏳</div>
-          <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>
-            Tiempo de prueba terminado
-          </div>
+          <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>Tiempo de prueba terminado</div>
           <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.6)', lineHeight:'1.6', marginBottom:'24px' }}>
             Espero que te haya gustado la app. Para activar tu cuenta y empezar a pronosticar avísale al administrador que ya pagaste.
           </div>
@@ -66,16 +63,13 @@ const PendingScreen = ({ currentUser, onLogout, onContinue }) => {
     );
   }
 
-  // Banner que se muestra arriba mientras exploran
   return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, zIndex:1000, background:'rgba(249,115,22,0.95)', padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', backdropFilter:'blur(10px)' }}>
+    <div style={{ position:'fixed', top:0, left:0, right:0, zIndex:1000, background:'rgba(249,115,22,0.95)', padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
       <div style={{ fontSize:'13px', color:'white', fontWeight:'500' }}>
         ⏱️ Modo prueba — No puedes pronosticar aún
       </div>
-      <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-        <div style={{ fontSize:'15px', fontWeight:'800', color:'white', background:'rgba(0,0,0,0.2)', padding:'4px 12px', borderRadius:'8px' }}>
-          {minutes}:{seconds.toString().padStart(2,'0')}
-        </div>
+      <div style={{ fontSize:'15px', fontWeight:'800', color:'white', background:'rgba(0,0,0,0.2)', padding:'4px 12px', borderRadius:'8px' }}>
+        {minutes}:{seconds.toString().padStart(2,'0')}
       </div>
     </div>
   );
@@ -97,6 +91,7 @@ function App() {
     return !localStorage.getItem('polla_tutorial_done');
   });
   const [trialExpired, setTrialExpired] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   const handleFinishTutorial = () => {
     localStorage.setItem('polla_tutorial_done', 'true');
@@ -114,7 +109,6 @@ function App() {
     return () => clearInterval(interval);
   }, [matches, currentUser]);
 
-  // Verificar si el tiempo de prueba expiró
   useEffect(() => {
     if (!currentUser || currentUser.approved || currentUser.isAdmin) return;
     const registered = parseInt(currentUser.id);
@@ -140,15 +134,12 @@ function App() {
     );
   }
 
-  // Si tiempo expiró mostrar pantalla de salida
   if (trialExpired && !currentUser.approved && !currentUser.isAdmin) {
     return (
       <div style={{ minHeight:'100vh', background:'#0a0e1a', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
         <div style={{ textAlign:'center', maxWidth:'380px' }}>
           <div style={{ fontSize:'56px', marginBottom:'20px' }}>⏳</div>
-          <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>
-            Tiempo de prueba terminado
-          </div>
+          <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>Tiempo de prueba terminado</div>
           <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.6)', lineHeight:'1.6', marginBottom:'24px' }}>
             Espero que te haya gustado la app. Para activar tu cuenta y empezar a pronosticar avísale al administrador que ya pagaste.
           </div>
@@ -189,12 +180,8 @@ function App() {
   return (
     <div style={{ minHeight:'100vh', background:'#0a0e1a' }}>
 
-      {/* Banner de tiempo de prueba */}
       {isPending && !trialExpired && (
-        <PendingScreen
-          currentUser={currentUser}
-          onLogout={() => setCurrentUser(null)}
-        />
+        <PendingScreen currentUser={currentUser} onLogout={() => setCurrentUser(null)}/>
       )}
 
       {showTutorial && currentUser && <Tutorial onFinish={handleFinishTutorial}/>}
@@ -244,9 +231,13 @@ function App() {
                 style={{ width:'100%', textAlign:'left', padding:'10px 14px', fontSize:'14px', color:'#f87171', background:'none', border:'none', cursor:'pointer' }}>
                 Salir
               </button>
-              <button onClick={()=>setShowTutorial(true)}
+              <button onClick={()=>{ setShowTutorial(true); setMenuOpen(false); }}
                 style={{ width:'100%', textAlign:'left', padding:'10px 14px', fontSize:'14px', color:'#93c5fd', background:'none', border:'none', cursor:'pointer' }}>
                 ❓ Ver tutorial
+              </button>
+              <button onClick={()=>{ setShowRules(true); setMenuOpen(false); }}
+                style={{ width:'100%', textAlign:'left', padding:'10px 14px', fontSize:'14px', color:'#c084fc', background:'none', border:'none', cursor:'pointer' }}>
+                📋 Ver reglas
               </button>
             </div>
           )}
@@ -263,6 +254,64 @@ function App() {
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
         {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser}/>}
       </main>
+
+      {/* Botón flotante reglas */}
+      <button onClick={()=>setShowRules(true)}
+        style={{ position:'fixed', bottom:'80px', right:'16px', zIndex:45, width:'44px', height:'44px', borderRadius:'50%', background:'linear-gradient(135deg,#7c3aed,#c026d3)', border:'none', cursor:'pointer', fontSize:'20px', boxShadow:'0 4px 20px rgba(124,58,237,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        📋
+      </button>
+
+      {/* Modal reglas */}
+      {showRules && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.8)', display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={()=>setShowRules(false)}>
+          <div style={{ background:'#0f1a2e', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'20px 20px 0 0', padding:'24px 20px', width:'100%', maxWidth:'500px', maxHeight:'80vh', overflowY:'auto' }}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{ width:'40px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.2)', margin:'0 auto 20px' }}/>
+            <h2 style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'20px', textAlign:'center' }}>📋 Reglas y Puntos</h2>
+
+            {[
+              { title:'⚽ Pronóstico de partidos', items:[
+                { label:'Resultado correcto (G/E/P)', pts:'+1 pt',  color:'#4ade80' },
+                { label:'Marcador exacto',            pts:'+3 pts', color:'#fde047' },
+              ]},
+              { title:'📊 Clasificados de grupo', items:[
+                { label:'1° y 2° en orden exacto',           pts:'+10 pts', color:'#fde047' },
+                { label:'Ambos equipos sin importar orden',   pts:'+5 pts',  color:'#4ade80' },
+                { label:'Un equipo correcto',                 pts:'+2 pts',  color:'#93c5fd' },
+              ]},
+              { title:'🏆 Campeón del Mundial', items:[
+                { label:'Adivinas el campeón', pts:'+15 pts', color:'#c084fc' },
+              ]},
+            ].map(section=>(
+              <div key={section.title} style={{ marginBottom:'20px' }}>
+                <div style={{ fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.7)', marginBottom:'10px' }}>{section.title}</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                  {section.items.map(item=>(
+                    <div key={item.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', borderRadius:'10px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize:'13px', color:'rgba(255,255,255,0.65)' }}>{item.label}</span>
+                      <span style={{ fontSize:'14px', fontWeight:'800', color:item.color }}>{item.pts}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ padding:'14px', borderRadius:'12px', background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.15)', marginBottom:'16px' }}>
+              <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.5)', lineHeight:'1.6' }}>
+                🔒 Los pronósticos cierran <strong style={{color:'white'}}>10 minutos</strong> antes de cada partido.<br/>
+                📅 Solo puedes pronosticar grupos antes de su primer partido.<br/>
+                💰 Inscripción: <strong style={{color:'white'}}>$15.000</strong>
+              </div>
+            </div>
+
+            <button onClick={()=>setShowRules(false)}
+              style={{ width:'100%', padding:'12px', background:'linear-gradient(135deg,#7c3aed,#c026d3)', border:'none', color:'white', fontWeight:'600', fontSize:'14px', borderRadius:'12px', cursor:'pointer' }}>
+              Entendido ✓
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:40, background:'#0f1a0f', borderTop:'1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ display:'flex', maxWidth:'900px', margin:'0 auto' }}>
