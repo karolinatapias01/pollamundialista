@@ -11,8 +11,8 @@ const Flag = ({ code, size = 40 }) => {
   if (!code) return <span style={{ fontSize: size * 0.7 + 'px' }}>🏳️</span>;
   return (
     <img src={`https://hatscripts.github.io/circle-flags/flags/${code.toLowerCase()}.svg`}
-      width={size * 1.5} height={size} alt={code}
-      style={{ borderRadius: '4px', objectFit: 'cover' }}
+      width={size} height={size} alt={code}
+      style={{ borderRadius: '50%', objectFit: 'cover' }}
       onError={(e) => { e.target.style.display='none'; }}/>
   );
 };
@@ -263,7 +263,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                     );
                   })()}
 
-                  {/* Pronósticos de otros */}
                   {(()=>{
                     const otherPreds = users
                       .filter(u=>u.id!==currentUser.id&&u.predictions?.[match.id])
@@ -361,4 +360,64 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                           🤝<br/>Empate
                         </button>
                         <button style={btnGEP(localPred.result==='away','96,165,250')} onClick={()=>setPredField(match.id,'result','away')}>
-                          <div style={{marginBottom:'4px'}}><Flag code={awayTeam?.flagCode}
+                          <div style={{marginBottom:'4px'}}><Flag code={awayTeam?.flagCode} size={20}/></div>
+                          Gana
+                        </button>
+                      </div>
+                      <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:'12px',marginBottom:'10px'}}>
+                        <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',textAlign:'center',marginBottom:'8px'}}>
+                          ¿Marcador exacto? <span style={{color:'#fde047'}}>(+3 pts)</span>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'10px'}}>
+                          <input type="number" min="0" max="20" placeholder="0"
+                            value={localPred.home??''}
+                            onChange={e=>{
+                              const v=parseInt(e.target.value);
+                              setPredField(match.id,'home',isNaN(v)?undefined:v);
+                              if(!isNaN(v)&&localPred.away!==undefined) setPredField(match.id,'result',v>localPred.away?'home':v<localPred.away?'away':'draw');
+                            }}
+                            style={{width:'54px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',color:'white'}}/>
+                          <span style={{fontSize:'20px',color:'rgba(255,255,255,0.3)'}}>-</span>
+                          <input type="number" min="0" max="20" placeholder="0"
+                            value={localPred.away??''}
+                            onChange={e=>{
+                              const v=parseInt(e.target.value);
+                              setPredField(match.id,'away',isNaN(v)?undefined:v);
+                              if(!isNaN(v)&&localPred.home!==undefined) setPredField(match.id,'result',localPred.home>v?'home':localPred.home<v?'away':'draw');
+                            }}
+                            style={{width:'54px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',color:'white'}}/>
+                        </div>
+                      </div>
+                      <button onClick={()=>handleSubmit(match.id)}
+                        style={{width:'100%',padding:'10px',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'white',fontWeight:'600',fontSize:'14px',borderRadius:'10px',border:'none',cursor:'pointer'}}>
+                        Guardar Pronóstico
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isFinished&&!canPred&&(
+                <div style={{padding:'10px 14px',borderRadius:'10px',background:'rgba(107,114,128,0.08)',border:'1px solid rgba(107,114,128,0.15)',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
+                  <Lock size={14} style={{color:'rgba(255,255,255,0.3)'}}/>
+                  <span style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',fontWeight:'500'}}>Pronósticos cerrados</span>
+                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.25)'}}>· Menos de 10 min</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {filteredMatches.length===0&&(
+          <div style={{...card,padding:'48px',textAlign:'center'}}>
+            <div style={{fontSize:'32px',marginBottom:'12px'}}>📅</div>
+            <div style={{fontSize:'15px',color:'rgba(255,255,255,0.4)',marginBottom:'6px'}}>No hay partidos {formatDayLabel(effectiveDate)==='Hoy'?'hoy':`el ${formatDayLabel(effectiveDate)}`}</div>
+            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.25)'}}>Use las flechas para ver otro día</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Matches;
