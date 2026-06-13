@@ -21,8 +21,12 @@ const Avatar = ({ avatar, size = 32 }) => {
   return <span style={{fontSize:size*0.8+'px'}}>👤</span>;
 };
 
-// Helper seguro para stats
 const s = (user, key) => user?.stats?.[key] ?? 0;
+
+const displayName = (user) => {
+  if (user.nickname) return `${user.name} "${user.nickname}"`;
+  return user.name;
+};
 
 const Ranking = ({ users, currentUser }) => {
   const sortedUsers = [...users].sort((a,b) => (b.points||0) - (a.points||0));
@@ -65,8 +69,8 @@ const Ranking = ({ users, currentUser }) => {
                     <div style={{display:'flex',justifyContent:'center',marginBottom:'8px',marginTop:isFirst?'4px':0}}>
                       <Avatar avatar={user.avatar} size={isFirst?36:28}/>
                     </div>
-                    <div style={{fontSize:isFirst?'13px':'12px',fontWeight:'700',color:'white',marginBottom:'4px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                      {user.nickname||user.name}
+                    <div style={{fontSize:isFirst?'12px':'11px',fontWeight:'700',color:'white',marginBottom:'4px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {displayName(user)}
                     </div>
                     <div style={{fontSize:isFirst?'28px':'22px',fontWeight:'800',color:c.text}}>{user.points||0}</div>
                     <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>pts</div>
@@ -111,10 +115,10 @@ const Ranking = ({ users, currentUser }) => {
                       <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
                         <Avatar avatar={user.avatar} size={28}/>
                         <div>
-                          <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                            <span style={{fontSize:'14px',fontWeight:'600',color:'rgba(255,255,255,0.9)'}}>{user.nickname||user.name}</span>
-                            {isMe && <span style={{fontSize:'10px',background:'rgba(74,222,128,0.2)',color:'#4ade80',padding:'1px 6px',borderRadius:'4px'}}>tú</span>}
-                            {user.isAdmin && <span style={{fontSize:'10px',background:'rgba(168,85,247,0.2)',color:'#c084fc',padding:'1px 6px',borderRadius:'4px'}}>admin</span>}
+                          <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}}>
+                            <span style={{fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.9)'}}>{displayName(user)}</span>
+                            {isMe&&<span style={{fontSize:'10px',background:'rgba(74,222,128,0.2)',color:'#4ade80',padding:'1px 6px',borderRadius:'4px'}}>tú</span>}
+                            {user.isAdmin&&<span style={{fontSize:'10px',background:'rgba(168,85,247,0.2)',color:'#c084fc',padding:'1px 6px',borderRadius:'4px'}}>admin</span>}
                           </div>
                           <div style={{fontSize:'12px',color:'rgba(255,255,255,0.3)',marginTop:'1px'}}>{s(user,'totalPredictions')} pronósticos</div>
                         </div>
@@ -159,10 +163,10 @@ const Ranking = ({ users, currentUser }) => {
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'10px'}}>
           {[
-            {label:'Puntos',       val: currentUser.points||0,                        color:'#4ade80'},
-            {label:'Aciertos',     val: s(currentUser,'correctPredictions'),           color:'#60a5fa'},
-            {label:'Exactos 🎯',   val: s(currentUser,'exactScores'),                 color:'#fbbf24'},
-            {label:'Mejor racha',  val: s(currentUser,'maxStreak'),                   color:'#f97316'},
+            {label:'Puntos',      val: currentUser.points||0,              color:'#4ade80'},
+            {label:'Aciertos',    val: s(currentUser,'correctPredictions'), color:'#60a5fa'},
+            {label:'Exactos 🎯',  val: s(currentUser,'exactScores'),        color:'#fbbf24'},
+            {label:'Mejor racha', val: s(currentUser,'maxStreak'),          color:'#f97316'},
           ].map(stat => (
             <div key={stat.label} style={{padding:'16px',borderRadius:'12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',textAlign:'center'}}>
               <div style={{fontSize:'28px',fontWeight:'800',color:stat.color}}>{stat.val}</div>
