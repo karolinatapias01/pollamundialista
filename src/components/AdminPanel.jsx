@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, X, Edit2, AlertCircle, Trophy, Users } from 'lucide-react';
+import { Save, X, Edit2, AlertCircle, Trash2 } from 'lucide-react';
 import { getTeamById, teams } from '../data/teams';
 import { matches as allMatches } from '../data/matches';
 
@@ -19,25 +19,23 @@ const getTeamsByGroup = (group) => {
   return [...ids].map(id => getTeamById(id)).filter(Boolean);
 };
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser }) => {
   const [activeSection, setActiveSection] = useState('matches');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
   const [filter, setFilter] = useState('pending');
 
-  // Grupos
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [groupFirst, setGroupFirst] = useState('');
   const [groupSecond, setGroupSecond] = useState('');
 
-  // Campeón
   const [championId, setChampionId] = useState('');
   const [championSaved, setChampionSaved] = useState(false);
 
   const filteredMatches = matches.filter(m => {
-    if (filter==='pending') return m.status==='pending';
-    if (filter==='finished') return m.status==='finished';
+    if (filter==='pending') return m.status !== 'finished';
+    if (filter==='finished') return m.status === 'finished';
     return true;
   });
 
@@ -48,10 +46,10 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
 
   const sectionBtn = (id, label, emoji) => (
     <button onClick={() => setActiveSection(id)}
-      style={{ padding:'8px 16px', borderRadius:'10px', fontSize:'13px', fontWeight:'500', cursor:'pointer',
-        background:activeSection===id?'rgba(168,85,247,0.2)':'rgba(255,255,255,0.04)',
-        border:activeSection===id?'1px solid rgba(168,85,247,0.4)':'1px solid rgba(255,255,255,0.08)',
-        color:activeSection===id?'#c084fc':'rgba(255,255,255,0.5)' }}>
+      style={{padding:'8px 14px', borderRadius:'10px', fontSize:'13px', fontWeight:'500', cursor:'pointer',
+        background: activeSection===id ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
+        border: activeSection===id ? '1px solid rgba(168,85,247,0.4)' : '1px solid rgba(255,255,255,0.08)',
+        color: activeSection===id ? '#c084fc' : 'rgba(255,255,255,0.5)'}}>
       {emoji} {label}
     </button>
   );
@@ -59,30 +57,29 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
 
-      {/* Header */}
       <div style={{...card,padding:'16px 20px',position:'relative',overflow:'hidden'}}>
         <div style={{position:'absolute',top:0,left:0,right:0,height:'3px',background:'linear-gradient(90deg,#7c3aed,#c026d3)'}}/>
         <h2 style={{fontSize:'17px',fontWeight:'800',color:'white',marginBottom:'4px'}}>👑 Panel de administración</h2>
-        <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Gestiona resultados, clasificados y campeón</p>
+        <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Gestiona resultados, clasificados, campeón y usuarios</p>
       </div>
 
-      {/* Secciones */}
       <div style={{...card,padding:'12px 14px',display:'flex',gap:'8px',overflowX:'auto'}}>
         {sectionBtn('matches','Partidos','⚽')}
         {sectionBtn('groups','Clasificados','📊')}
         {sectionBtn('champion','Campeón','🏆')}
+        {sectionBtn('users','Usuarios','👥')}
       </div>
 
-      {/* ── PARTIDOS ── */}
+      {/* PARTIDOS */}
       {activeSection==='matches' && (
         <>
           <div style={{...card,padding:'12px 14px',display:'flex',gap:'8px',overflowX:'auto'}}>
-            {[['pending','⏳ Pendientes','orange'],['finished','✓ Finalizados','green'],['all','▪ Todos','blue']].map(([id,label,color])=>(
+            {[['pending','⏳ Pendientes'],['finished','✓ Finalizados'],['all','▪ Todos']].map(([id,label])=>(
               <button key={id} onClick={()=>setFilter(id)}
                 style={{padding:'6px 14px',borderRadius:'16px',fontSize:'13px',fontWeight:'500',cursor:'pointer',whiteSpace:'nowrap',
-                  background:filter===id?`rgba(${color==='orange'?'249,115,22':color==='green'?'22,163,74':'59,130,246'},0.15)`:'rgba(255,255,255,0.04)',
-                  border:filter===id?`1px solid rgba(${color==='orange'?'249,115,22':color==='green'?'22,163,74':'59,130,246'},0.4)`:'1px solid rgba(255,255,255,0.1)',
-                  color:filter===id?color==='orange'?'#fb923c':color==='green'?'#4ade80':'#93c5fd':'rgba(255,255,255,0.45)'}}>
+                  background:filter===id?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)',
+                  border:filter===id?'1px solid rgba(74,222,128,0.4)':'1px solid rgba(255,255,255,0.1)',
+                  color:filter===id?'#4ade80':'rgba(255,255,255,0.45)'}}>
                 {label}
               </button>
             ))}
@@ -149,7 +146,6 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                       </button>
                     )}
                   </div>
-                  <div style={{marginTop:'8px',fontSize:'12px',color:'rgba(255,255,255,0.25)',textAlign:'center'}}>📍 {match.venue}</div>
                 </div>
               );
             })}
@@ -160,14 +156,13 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         </>
       )}
 
-      {/* ── CLASIFICADOS DE GRUPO ── */}
+      {/* CLASIFICADOS */}
       {activeSection==='groups' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
             <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>📊 Ingresar clasificados</h3>
-            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Ingresa quién quedó 1° y 2° en cada grupo para calcular puntos</p>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Ingresa quién quedó 1° y 2° en cada grupo</p>
           </div>
-
           <div style={{display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'16px'}}>
             {ALL_GROUPS.map(g=>(
               <button key={g} onClick={()=>{setSelectedGroup(g);setGroupFirst('');setGroupSecond('');}}
@@ -179,9 +174,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               </button>
             ))}
           </div>
-
           <div style={{fontSize:'14px',fontWeight:'600',color:'white',marginBottom:'12px'}}>Grupo {selectedGroup}</div>
-
           {['first','second'].map(pos=>(
             <div key={pos} style={{marginBottom:'12px'}}>
               <div style={{fontSize:'12px',color:pos==='first'?'#4ade80':'#93c5fd',fontWeight:'600',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>
@@ -205,34 +198,30 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               </div>
             </div>
           ))}
-
-          <button
-            onClick={()=>{
-              if(!groupFirst||!groupSecond){alert('Selecciona 1° y 2°');return;}
-              if(groupFirst===groupSecond){alert('No pueden ser el mismo equipo');return;}
-              onUpdateGroupResult(selectedGroup,groupFirst,groupSecond);
-              alert(`✓ Clasificados del Grupo ${selectedGroup} guardados. Puntos actualizados.`);
-              setGroupFirst(''); setGroupSecond('');
-            }}
+          <button onClick={()=>{
+            if(!groupFirst||!groupSecond){alert('Selecciona 1° y 2°');return;}
+            if(groupFirst===groupSecond){alert('No pueden ser el mismo equipo');return;}
+            onUpdateGroupResult(selectedGroup,groupFirst,groupSecond);
+            alert(`✓ Clasificados del Grupo ${selectedGroup} guardados.`);
+            setGroupFirst(''); setGroupSecond('');
+          }}
             style={{width:'100%',padding:'12px',background:groupFirst&&groupSecond?'linear-gradient(135deg,#7c3aed,#c026d3)':'rgba(255,255,255,0.06)',border:'none',color:groupFirst&&groupSecond?'white':'rgba(255,255,255,0.3)',fontWeight:'600',fontSize:'14px',borderRadius:'10px',cursor:'pointer',marginTop:'8px'}}>
             Guardar clasificados Grupo {selectedGroup}
           </button>
         </div>
       )}
 
-      {/* ── CAMPEÓN ── */}
+      {/* CAMPEÓN */}
       {activeSection==='champion' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
             <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🏆 Ingresar campeón</h3>
-            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Selecciona el campeón del Mundial para dar +15 pts a quienes lo adivinaron</p>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Da +15 pts a quienes adivinaron el campeón</p>
           </div>
-
           {championSaved ? (
             <div style={{padding:'16px',borderRadius:'12px',background:'rgba(250,204,21,0.1)',border:'1px solid rgba(250,204,21,0.3)',textAlign:'center'}}>
               <div style={{fontSize:'32px',marginBottom:'8px'}}>🏆</div>
               <div style={{fontSize:'14px',fontWeight:'700',color:'#fde047'}}>¡Campeón registrado!</div>
-              <div style={{fontSize:'13px',color:'rgba(255,255,255,0.5)',marginTop:'4px'}}>Los puntos ya fueron actualizados</div>
             </div>
           ) : (
             <>
@@ -248,13 +237,12 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                   </button>
                 ))}
               </div>
-              <button
-                onClick={()=>{
-                  if(!championId){alert('Selecciona el campeón');return;}
-                  if(!confirm(`¿Confirmas que el campeón es ${getTeamById(championId)?.name}? Esta acción dará +15 pts a quienes lo adivinaron.`)) return;
-                  onUpdateChampion(championId);
-                  setChampionSaved(true);
-                }}
+              <button onClick={()=>{
+                if(!championId){alert('Selecciona el campeón');return;}
+                if(!confirm(`¿Confirmas que el campeón es ${getTeamById(championId)?.name}?`)) return;
+                onUpdateChampion(championId);
+                setChampionSaved(true);
+              }}
                 style={{width:'100%',padding:'12px',background:championId?'linear-gradient(135deg,#d97706,#f59e0b)':'rgba(255,255,255,0.06)',border:'none',color:championId?'white':'rgba(255,255,255,0.3)',fontWeight:'600',fontSize:'14px',borderRadius:'10px',cursor:'pointer'}}>
                 🏆 Registrar campeón y dar puntos
               </button>
@@ -263,13 +251,53 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         </div>
       )}
 
+      {/* USUARIOS */}
+      {activeSection==='users' && (
+        <div style={{...card,padding:'20px'}}>
+          <div style={{marginBottom:'16px'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>👥 Gestionar usuarios</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Elimina usuarios de la polla</p>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+            {users.map(user=>{
+              const team = getTeamById(user.avatar);
+              return(
+                <div key={user.id} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)'}}>
+                  {team?.flagCode
+                    ? <img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={32} height={32} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
+                    : <span style={{fontSize:'24px'}}>{user.avatar||'👤'}</span>
+                  }
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:'14px',fontWeight:'600',color:'white'}}>
+                      {user.name}{user.nickname?` "${user.nickname}"`:''} 
+                      {user.isAdmin&&<span style={{fontSize:'10px',background:'rgba(168,85,247,0.2)',color:'#c084fc',padding:'1px 6px',borderRadius:'4px',marginLeft:'6px'}}>admin</span>}
+                    </div>
+                    <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>{user.points||0} pts · {Object.keys(user.predictions||{}).length} pronósticos</div>
+                  </div>
+                  {!user.isAdmin && (
+                    <button onClick={()=>{
+                      if(!confirm(`¿Eliminar a ${user.name}? Esta acción no se puede deshacer.`)) return;
+                      onDeleteUser(user.id);
+                    }}
+                      style={{padding:'8px 12px',borderRadius:'10px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.25)',color:'#f87171',cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',fontWeight:'500'}}>
+                      <Trash2 size={14}/> Eliminar
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div style={{padding:'14px 16px',borderRadius:'12px',background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.15)'}}>
         <div style={{display:'flex',gap:'8px',alignItems:'flex-start'}}>
           <AlertCircle size={15} style={{color:'#93c5fd',flexShrink:0,marginTop:'1px'}}/>
           <ul style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',lineHeight:'1.8',listStyle:'none'}}>
-            <li>• Los puntos de partidos se actualizan al guardar resultado</li>
-            <li>• Los clasificados de grupo se calculan cuando ingresas 1° y 2°</li>
+            <li>• Los puntos se actualizan al guardar resultado</li>
+            <li>• Los clasificados se calculan cuando ingresas 1° y 2°</li>
             <li>• El campeón solo se puede ingresar una vez</li>
+            <li>• No se puede eliminar al administrador</li>
           </ul>
         </div>
       </div>

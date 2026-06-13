@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  collection, doc, onSnapshot, setDoc, updateDoc, getDoc, getDocs
+  collection, doc, onSnapshot, setDoc, updateDoc, getDoc, getDocs, deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { matches as initialMatches } from '../data/matches';
@@ -92,7 +92,6 @@ const useAppState = () => {
     if (!userSnap.exists()) return;
     const user = userSnap.data();
 
-    // Filtrar undefined para que Firebase no falle
     const prediction = { result };
     if (homeScore !== undefined && homeScore !== null && !isNaN(homeScore)) {
       prediction.homeScore = parseInt(homeScore);
@@ -155,7 +154,6 @@ const useAppState = () => {
       }
     });
 
-    // Puntos de grupos
     const groupPreds = user.groupPredictions || {};
     Object.entries(groupPreds).forEach(([group, pred]) => {
       if (!pred?.first || !pred?.second) return;
@@ -241,6 +239,10 @@ const useAppState = () => {
     }
   };
 
+  const deleteUser = async (userId) => {
+    await deleteDoc(doc(db, 'users', userId));
+  };
+
   const addReaction = async (matchId, userId, emoji) => {
     const ref = doc(db, 'reactions', String(matchId));
     const snap = await getDoc(ref);
@@ -262,7 +264,7 @@ const useAppState = () => {
     setCurrentUser, registerUser, makePrediction,
     saveGroupPrediction, updateMatchResult,
     updateGroupResult, updateChampion,
-    addReaction, removeReaction
+    addReaction, removeReaction, deleteUser
   };
 };
 

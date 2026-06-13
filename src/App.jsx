@@ -20,7 +20,7 @@ function App() {
     setCurrentUser, registerUser, makePrediction,
     saveGroupPrediction, updateMatchResult,
     updateGroupResult, updateChampion,
-    addReaction, removeReaction
+    addReaction, removeReaction, deleteUser
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState('home');
@@ -146,7 +146,7 @@ function App() {
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
         {activeTab==='news'    && <News/>}
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users}/>}
+        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users} onDeleteUser={deleteUser}/>}
       </main>
 
       <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:40, background:'#0f1a0f', borderTop:'1px solid rgba(255,255,255,0.1)' }}>
