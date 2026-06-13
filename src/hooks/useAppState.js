@@ -91,9 +91,19 @@ const useAppState = () => {
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) return;
     const user = userSnap.data();
+
+    // Filtrar undefined para que Firebase no falle
+    const prediction = { result };
+    if (homeScore !== undefined && homeScore !== null && !isNaN(homeScore)) {
+      prediction.homeScore = parseInt(homeScore);
+    }
+    if (awayScore !== undefined && awayScore !== null && !isNaN(awayScore)) {
+      prediction.awayScore = parseInt(awayScore);
+    }
+
     const updatedPredictions = {
       ...user.predictions,
-      [matchId]: { result, homeScore, awayScore }
+      [matchId]: prediction
     };
     await updateDoc(userRef, {
       predictions: updatedPredictions,
@@ -145,29 +155,28 @@ const useAppState = () => {
       }
     });
 
-    // Puntos de grupos clasificados
+    // Puntos de grupos
     const groupPreds = user.groupPredictions || {};
     Object.entries(groupPreds).forEach(([group, pred]) => {
-      if (!pred || !pred.first || !pred.second) return;
+      if (!pred?.first || !pred?.second) return;
       const groupResult = user.groupResults?.[group];
-      if (!groupResult) return; // aún no hay resultado oficial
-      const actualFirst  = groupResult.first;
-      const actualSecond = groupResult.second;
-      const predFirst    = pred.first;
-      const predSecond   = pred.second;
-
-      if (predFirst === actualFirst && predSecond === actualSecond) {
-        totalPoints += 10; // orden exacto
+      if (!groupResult) return;
+      if (pred.first === groupResult.first && pred.second === groupResult.second) {
+        totalPoints += 10;
       } else if (
-        (predFirst === actualFirst || predFirst === actualSecond) &&
-        (predSecond === actualFirst || predSecond === actualSecond)
+        (pred.first === groupResult.first || pred.first === groupResult.second) &&
+        (pred.second === groupResult.first || pred.second === groupResult.second)
       ) {
-        totalPoints += 5; // ambos equipos sin orden
-      } else if (predFirst === actualFirst || predFirst === actualSecond ||
-                 predSecond === actualFirst || predSecond === actualSecond) {
-        totalPoints += 2; // un equipo correcto
+        totalPoints += 5;
+      } else if (
+        pred.first === groupResult.first || pred.first === groupResult.second ||
+        pred.second === groupResult.first || pred.second === groupResult.second
+      ) {
+        totalPoints += 2;
       }
     });
+
+    if (user.championCorrect) totalPoints += 15;
 
     return {
       ...user,
@@ -202,7 +211,6 @@ const useAppState = () => {
     }
   };
 
-  // Admin ingresa los clasificados reales de un grupo
   const updateGroupResult = async (group, first, second) => {
     const usersSnap = await getDocs(collection(db, 'users'));
     for (const userDoc of usersSnap.docs) {
@@ -220,7 +228,6 @@ const useAppState = () => {
     }
   };
 
-  // Verificar campeón (+15 pts)
   const updateChampion = async (championId) => {
     const usersSnap = await getDocs(collection(db, 'users'));
     for (const userDoc of usersSnap.docs) {

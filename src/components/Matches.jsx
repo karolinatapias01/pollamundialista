@@ -83,13 +83,15 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
   const setPredField = (matchId, field, value) =>
     setPredictions(prev=>({...prev,[matchId]:{...prev[matchId],[field]:value}}));
 
-  const handleSubmit = (matchId) => {
-    const p = predictions[matchId]||{};
-    if (!p.result && p.home===undefined) { alert('Selecciona Gana/Empate/Pierde o ingresa un marcador'); return; }
-    const result = p.result||(p.home>p.away?'home':p.home<p.away?'away':'draw');
-    onMakePrediction(currentUser.id, matchId, result, p.home, p.away);
-    setPredictions(prev=>{ const n={...prev}; delete n[matchId]; return n; });
-  };
+    const handleSubmit = (matchId) => {
+      const p = predictions[matchId]||{};
+      if (!p.result && p.home===undefined) { alert('Selecciona Gana/Empate/Pierde o ingresa un marcador'); return; }
+      const result = p.result||(p.home>p.away?'home':p.home<p.away?'away':'draw');
+      const homeScore = p.home !== undefined ? parseInt(p.home) : undefined;
+      const awayScore = p.away !== undefined ? parseInt(p.away) : undefined;
+      onMakePrediction(currentUser.id, matchId, result, homeScore, awayScore);
+      setPredictions(prev=>{ const n={...prev}; delete n[matchId]; return n; });
+    };
 
   const toggleReactionPicker = (matchId) => setShowReactions(prev=>({...prev,[matchId]:!prev[matchId]}));
   const handleReaction = (matchId, emoji) => {
