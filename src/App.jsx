@@ -9,6 +9,7 @@ import History from './components/History';
 import Groups from './components/Groups';
 import News from './components/News';
 import AdminPanel from './components/AdminPanel';
+import Tutorial from './components/Tutorial';
 import useAppState from './hooks/useAppState';
 import { startAutoSync } from './syncService';
 import { startNotifications } from './notifications';
@@ -24,6 +25,14 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    return !localStorage.getItem('polla_tutorial_done');
+  });
+
+  const handleFinishTutorial = () => {
+    localStorage.setItem('polla_tutorial_done', 'true');
+    setShowTutorial(false);
+  };
 
   useEffect(() => {
     const interval = startAutoSync();
@@ -72,6 +81,9 @@ function App() {
 
   return (
     <div style={{ minHeight:'100vh', background:'#0a0e1a' }}>
+
+      {showTutorial && currentUser && <Tutorial onFinish={handleFinishTutorial}/>}
+
       <header style={{ background:'linear-gradient(135deg,#0f1f0f 0%,#0a1628 50%,#1a0a28 100%)', borderBottom:'1px solid rgba(255,255,255,0.08)', position:'sticky', top:0, zIndex:50 }}>
         <div style={{ maxWidth:'900px', margin:'0 auto', padding:'0 16px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', height:'64px' }}>
@@ -116,6 +128,10 @@ function App() {
               <button onClick={()=>{ if(confirm('¿Salir?')) setCurrentUser(null); }}
                 style={{ width:'100%', textAlign:'left', padding:'10px 14px', fontSize:'14px', color:'#f87171', background:'none', border:'none', cursor:'pointer' }}>
                 Salir
+              </button>
+              <button onClick={()=>setShowTutorial(true)}
+                style={{ width:'100%', textAlign:'left', padding:'10px 14px', fontSize:'14px', color:'#93c5fd', background:'none', border:'none', cursor:'pointer' }}>
+                ❓ Ver tutorial
               </button>
             </div>
           )}
