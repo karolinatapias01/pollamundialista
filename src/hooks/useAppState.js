@@ -12,12 +12,10 @@ const useAppState = () => {
   const [reactions, setReactions] = useState({});
   const [loading,   setLoading]   = useState(true);
 
-  // Al cargar la app verificar si hay sesión guardada y cargar datos frescos
   useEffect(() => {
     const saved = localStorage.getItem('polla_currentUser');
     if (!saved) return;
     const savedUser = JSON.parse(saved);
-    // Se cargará cuando lleguen los usuarios de Firebase
     setCurrentUserState({ ...savedUser, _loading: true });
   }, []);
 
@@ -161,9 +159,11 @@ const useAppState = () => {
         && parseInt(prediction.awayScore) === parseInt(match.awayScore);
 
       if (isExact) {
-        totalPoints += 3; exactScores++; correctPredictions++;
+        // Marcador exacto = 1 pt por resultado + 3 pts adicionales = 4 pts total
+        totalPoints += 4; exactScores++; correctPredictions++;
         currentStreak++; maxStreak = Math.max(maxStreak, currentStreak);
       } else if (predictedResult === actualResult) {
+        // Solo resultado correcto = 1 pt
         totalPoints += 1; correctPredictions++;
         currentStreak++; maxStreak = Math.max(maxStreak, currentStreak);
       } else {

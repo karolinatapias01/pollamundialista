@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, X, Edit2, AlertCircle, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Save, X, Edit2, AlertCircle, Trash2, CheckCircle } from 'lucide-react';
 import { getTeamById, teams } from '../data/teams';
 import { matches as allMatches } from '../data/matches';
 
@@ -19,7 +19,7 @@ const getTeamsByGroup = (group) => {
   return [...ids].map(id => getTeamById(id)).filter(Boolean);
 };
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser, onApproveUser, onRejectUser }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
@@ -30,6 +30,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [groupSecond, setGroupSecond] = useState('');
   const [championId, setChampionId] = useState('');
   const [championSaved, setChampionSaved] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
   const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
@@ -42,12 +43,11 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
 
   const formatDate = (d) => new Date(d).toLocaleDateString('es-CO',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'America/Bogota'});
   const phaseLabel = (p) => ({groups:'Grupos',round16:'Octavos',quarters:'Cuartos',semis:'Semis',third:'3er Lugar',final:'Final'}[p]||p);
-
   const inputStyle = { width:'56px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'2px solid rgba(168,85,247,0.4)',color:'white',outline:'none' };
 
   const sectionBtn = (id, label, emoji, badge) => (
     <button onClick={() => setActiveSection(id)}
-      style={{padding:'8px 14px', borderRadius:'10px', fontSize:'13px', fontWeight:'500', cursor:'pointer', position:'relative',
+      style={{padding:'8px 14px', borderRadius:'10px', fontSize:'13px', fontWeight:'500', cursor:'pointer', position:'relative', whiteSpace:'nowrap',
         background: activeSection===id ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
         border: activeSection===id ? '1px solid rgba(168,85,247,0.4)' : '1px solid rgba(255,255,255,0.08)',
         color: activeSection===id ? '#c084fc' : 'rgba(255,255,255,0.5)'}}>
@@ -74,6 +74,11 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
           </div>
           <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>
             {user.points||0} pts · {Object.keys(user.predictions||{}).length} pronósticos
+            {user.championPrediction && (
+              <span style={{marginLeft:'8px',color:'#fde047'}}>
+                🏆 {getTeamById(user.championPrediction)?.name}
+              </span>
+            )}
           </div>
         </div>
         <div style={{display:'flex',gap:'6px'}}>
@@ -112,14 +117,15 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         {sectionBtn('groups','Clasificados','📊')}
         {sectionBtn('champion','Campeón','🏆')}
         {sectionBtn('users','Usuarios','👥')}
+        {sectionBtn('reset','Resetear','🔄')}
       </div>
 
       {/* PENDIENTES */}
       {activeSection==='pending' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
-            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>⏳ Usuarios pendientes de aprobación</h3>
-            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Aprueba solo a quienes hayan pagado</p>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>⏳ Usuarios pendientes</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Aprueba solo a quienes hayan pagado $15.000</p>
           </div>
           {pendingUsers.length === 0 ? (
             <div style={{textAlign:'center',padding:'32px',color:'rgba(255,255,255,0.35)',fontSize:'14px'}}>
@@ -157,7 +163,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               return(
                 <div key={match.id} style={{...card,padding:'16px 18px',borderLeft:`3px solid ${isFinished?'#16a34a':'#f97316'}`}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
-                    <div style={{display:'flex',gap:'6px'}}>
+                    <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
                       <span style={{fontSize:'11px',padding:'2px 8px',borderRadius:'6px',background:isFinished?'rgba(22,163,74,0.12)':'rgba(249,115,22,0.12)',color:isFinished?'#4ade80':'#fb923c',border:`1px solid ${isFinished?'rgba(22,163,74,0.25)':'rgba(249,115,22,0.25)'}`}}>
                         {isFinished?'✓ Finalizado':'⏳ Pendiente'}
                       </span>
@@ -318,7 +324,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
       {activeSection==='users' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
-            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>👥 Usuarios aprobados</h3>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>👥 Usuarios aprobados ({approvedUsers.length})</h3>
             <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Jugadores activos en la polla</p>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
@@ -328,11 +334,44 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         </div>
       )}
 
+      {/* RESETEAR */}
+      {activeSection==='reset' && (
+        <div style={{...card,padding:'20px'}}>
+          <div style={{marginBottom:'16px'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔄 Resetear pronósticos</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Borra pronósticos y puntos. Los usuarios y campeón pronosticado se mantienen.</p>
+          </div>
+          <div style={{padding:'16px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',marginBottom:'16px'}}>
+            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.6)',lineHeight:'1.8'}}>
+              ✓ Puntos → 0<br/>
+              ✓ Pronósticos de partidos → borrados<br/>
+              ✓ Pronósticos de grupos → borrados<br/>
+              ✓ Resultados de partidos → pendientes<br/>
+              ✗ Usuarios → se mantienen<br/>
+              ✗ Campeón pronosticado → se mantiene
+            </div>
+          </div>
+          <button
+            disabled={resetting}
+            onClick={async ()=>{
+              if(!confirm('¿Seguro? Esto borra todos los puntos y pronósticos.')) return;
+              if(!confirm('¿Está completamente seguro? Esta acción NO se puede deshacer.')) return;
+              setResetting(true);
+              await onResetAll();
+              setResetting(false);
+              alert('✓ Todo reseteado. Todos empiezan desde cero.');
+            }}
+            style={{width:'100%',padding:'14px',background:resetting?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.2)',border:'1px solid rgba(239,68,68,0.4)',color:resetting?'rgba(255,255,255,0.3)':'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:resetting?'default':'pointer'}}>
+            {resetting?'⏳ Reseteando...':'🔄 Resetear todo y empezar de cero'}
+          </button>
+        </div>
+      )}
+
       <div style={{padding:'14px 16px',borderRadius:'12px',background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.15)'}}>
         <div style={{display:'flex',gap:'8px',alignItems:'flex-start'}}>
           <AlertCircle size={15} style={{color:'#93c5fd',flexShrink:0,marginTop:'1px'}}/>
           <ul style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',lineHeight:'1.8',listStyle:'none'}}>
-            <li>• Aprueba solo usuarios que hayan pagado</li>
+            <li>• Aprueba solo usuarios que hayan pagado $15.000</li>
             <li>• Los pendientes no pueden pronosticar</li>
             <li>• El número rojo en ⏳ indica cuántos esperan aprobación</li>
           </ul>

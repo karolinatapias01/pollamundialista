@@ -82,7 +82,7 @@ function App() {
     saveGroupPrediction, updateMatchResult,
     updateGroupResult, updateChampion,
     addReaction, removeReaction, deleteUser,
-    approveUser, rejectUser
+    approveUser, rejectUser, resetAllUsers
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState('home');
@@ -141,7 +141,7 @@ function App() {
           <div style={{ fontSize:'56px', marginBottom:'20px' }}>⏳</div>
           <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>Tiempo de prueba terminado</div>
           <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.6)', lineHeight:'1.6', marginBottom:'24px' }}>
-            Espero que te haya gustado la app. Para activar tu cuenta y empezar a pronosticar avísale al administrador que ya pagaste.
+            Espero que te haya gustado la app. Para activar tu cuenta avísale al administrador que ya pagaste.
           </div>
           <div style={{ padding:'16px', borderRadius:'14px', background:'rgba(249,115,22,0.1)', border:'1px solid rgba(249,115,22,0.2)', marginBottom:'24px' }}>
             <div style={{ fontSize:'13px', color:'#fb923c', fontWeight:'600', marginBottom:'4px' }}>Tu nombre registrado:</div>
@@ -252,7 +252,7 @@ function App() {
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
         {activeTab==='news'    && <News/>}
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser}/>}
+        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers}/>}
       </main>
 
       {/* Botón flotante reglas */}
@@ -272,13 +272,13 @@ function App() {
 
             {[
               { title:'⚽ Pronóstico de partidos', items:[
-                { label:'Resultado correcto (G/E/P)', pts:'+1 pt',  color:'#4ade80' },
-                { label:'Marcador exacto',            pts:'+3 pts', color:'#fde047' },
+                { label:'Resultado correcto (G/E/P)', pts:'+1 pt', color:'#4ade80' },
+                { label:'Marcador exacto (incluye resultado)', pts:'+4 pts', color:'#fde047' },
               ]},
               { title:'📊 Clasificados de grupo', items:[
-                { label:'1° y 2° en orden exacto',           pts:'+10 pts', color:'#fde047' },
-                { label:'Ambos equipos sin importar orden',   pts:'+5 pts',  color:'#4ade80' },
-                { label:'Un equipo correcto',                 pts:'+2 pts',  color:'#93c5fd' },
+                { label:'1° y 2° en orden exacto', pts:'+10 pts', color:'#fde047' },
+                { label:'Ambos equipos sin importar orden', pts:'+5 pts', color:'#4ade80' },
+                { label:'Un equipo correcto', pts:'+2 pts', color:'#93c5fd' },
               ]},
               { title:'🏆 Campeón del Mundial', items:[
                 { label:'Adivinas el campeón', pts:'+15 pts', color:'#c084fc' },
