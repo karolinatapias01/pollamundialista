@@ -76,7 +76,8 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
 
   const canPredict = (match) => {
     if (match.status==='finished') return false;
-    return new Date() < new Date(new Date(match.date).getTime()-1*60*1000);
+    // Permite pronosticar hasta 10 minutos después de iniciar
+    return new Date() < new Date(new Date(match.date).getTime()+10*60*1000);
   };
 
   const getUserPrediction = (matchId) => currentUser.predictions?.[matchId];
@@ -421,7 +422,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                 <div style={{padding:'10px 14px',borderRadius:'10px',background:'rgba(107,114,128,0.08)',border:'1px solid rgba(107,114,128,0.15)',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
                   <Lock size={14} style={{color:'rgba(255,255,255,0.3)'}}/>
                   <span style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',fontWeight:'500'}}>Pronósticos cerrados</span>
-                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.25)'}}>· Menos de 1 min</span>
                 </div>
               )}
             </div>
