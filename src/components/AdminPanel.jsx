@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Save, X, Edit2, AlertCircle, Trash2, CheckCircle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Save, X, Edit2, AlertCircle, Trash2, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTeamById, teams } from '../data/teams';
 import { matches as allMatches } from '../data/matches';
 
@@ -19,12 +19,15 @@ const getTeamsByGroup = (group) => {
   return [...ids].map(id => getTeamById(id)).filter(Boolean);
 };
 
+const toColDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+const todayCol = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+
 const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
-  const [filter, setFilter] = useState('pending');
+  const [selectedDate, setSelectedDate] = useState(todayCol());
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [groupFirst, setGroupFirst] = useState('');
   const [groupSecond, setGroupSecond] = useState('');
@@ -35,13 +38,39 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
   const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
 
-  const filteredMatches = matches.filter(m => {
-    if (filter==='pending') return m.status !== 'finished';
-    if (filter==='finished') return m.status === 'finished';
-    return true;
-  });
+  // Días disponibles con partidos
+  const availableDays = useMemo(() => {
+    const days = new Set(matches.map(m => toColDate(m.date)));
+    return [...days].sort();
+  }, [matches]);
 
-  const formatDate = (d) => new Date(d).toLocaleDateString('es-CO',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'America/Bogota'});
+  const effectiveDate = availableDays.includes(selectedDate) ? selectedDate : (availableDays.find(d => d >= todayCol()) || availableDays[0] || selectedDate);
+
+  const matchesForDay = useMemo(() =>
+    matches.filter(m => toColDate(m.date) === effectiveDate)
+      .sort((a,b) => new Date(a.date) - new Date(b.date)),
+    [matches, effectiveDate]
+  );
+
+  const currentDayIndex = availableDays.indexOf(effectiveDate);
+  const prevDay = currentDayIndex > 0 ? availableDays[currentDayIndex-1] : null;
+  const nextDay = currentDayIndex < availableDays.length-1 ? availableDays[currentDayIndex+1] : null;
+
+  const formatDayLabel = (dateStr) => {
+    if (!dateStr) return '';
+    const today = todayCol();
+    const yest = new Date(); yest.setDate(yest.getDate()-1);
+    const yesterStr = yest.toLocaleDateString('en-CA',{timeZone:'America/Bogota'});
+    const tom = new Date(); tom.setDate(tom.getDate()+1);
+    const tomStr = tom.toLocaleDateString('en-CA',{timeZone:'America/Bogota'});
+    if (dateStr===today) return 'Hoy';
+    if (dateStr===yesterStr) return 'Ayer';
+    if (dateStr===tomStr) return 'Mañana';
+    const [y,m,d] = dateStr.split('-');
+    return new Date(+y,+m-1,+d).toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short'});
+  };
+
+  const formatTime = (ds) => new Date(ds).toLocaleTimeString('es-CO',{timeZone:'America/Bogota',hour:'2-digit',minute:'2-digit',hour12:true});
   const phaseLabel = (p) => ({groups:'Grupos',round16:'Octavos',quarters:'Cuartos',semis:'Semis',third:'3er Lugar',final:'Final'}[p]||p);
   const inputStyle = { width:'56px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'2px solid rgba(168,85,247,0.4)',color:'white',outline:'none' };
 
@@ -140,22 +169,42 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         </div>
       )}
 
-      {/* PARTIDOS */}
+      {/* PARTIDOS POR FECHA */}
       {activeSection==='matches' && (
         <>
-          <div style={{...card,padding:'12px 14px',display:'flex',gap:'8px',overflowX:'auto'}}>
-            {[['pending','⏳ Pendientes'],['finished','✓ Finalizados'],['all','▪ Todos']].map(([id,label])=>(
-              <button key={id} onClick={()=>setFilter(id)}
-                style={{padding:'6px 14px',borderRadius:'16px',fontSize:'13px',fontWeight:'500',cursor:'pointer',whiteSpace:'nowrap',
-                  background:filter===id?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)',
-                  border:filter===id?'1px solid rgba(74,222,128,0.4)':'1px solid rgba(255,255,255,0.1)',
-                  color:filter===id?'#4ade80':'rgba(255,255,255,0.45)'}}>
-                {label}
+          {/* Navegador de fechas */}
+          <div style={{...card,padding:'12px 16px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
+              <button onClick={()=>prevDay&&setSelectedDate(prevDay)} disabled={!prevDay}
+                style={{padding:'6px 10px',borderRadius:'8px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:prevDay?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.2)',cursor:prevDay?'pointer':'default'}}>
+                <ChevronLeft size={16}/>
               </button>
-            ))}
+              <div style={{textAlign:'center'}}>
+                <div style={{fontSize:'16px',fontWeight:'700',color:'white'}}>{formatDayLabel(effectiveDate)}</div>
+                <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginTop:'1px'}}>
+                  {matchesForDay.length} partido{matchesForDay.length!==1?'s':''} · {matchesForDay.filter(m=>m.status==='finished').length} finalizados
+                </div>
+              </div>
+              <button onClick={()=>nextDay&&setSelectedDate(nextDay)} disabled={!nextDay}
+                style={{padding:'6px 10px',borderRadius:'8px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:nextDay?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.2)',cursor:nextDay?'pointer':'default'}}>
+                <ChevronRight size={16}/>
+              </button>
+            </div>
+            <div style={{display:'flex',gap:'6px',overflowX:'auto',paddingBottom:'2px'}}>
+              {availableDays.map(d=>(
+                <button key={d} onClick={()=>setSelectedDate(d)}
+                  style={{flexShrink:0,padding:'5px 12px',borderRadius:'16px',fontSize:'12px',fontWeight:'500',cursor:'pointer',whiteSpace:'nowrap',
+                    background:d===effectiveDate?'rgba(168,85,247,0.2)':'rgba(255,255,255,0.04)',
+                    border:d===effectiveDate?'1px solid rgba(168,85,247,0.4)':'1px solid rgba(255,255,255,0.08)',
+                    color:d===effectiveDate?'#c084fc':d===todayCol()?'#fbbf24':'rgba(255,255,255,0.45)'}}>
+                  {formatDayLabel(d)}
+                </button>
+              ))}
+            </div>
           </div>
+
           <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
-            {filteredMatches.map(match=>{
+            {matchesForDay.map(match=>{
               const homeTeam=getTeamById(match.homeTeam);
               const awayTeam=getTeamById(match.awayTeam);
               const isEditing=editingMatch===match.id;
@@ -171,7 +220,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                         {phaseLabel(match.phase)}{match.group?` · Grupo ${match.group}`:''}
                       </span>
                     </div>
-                    <span style={{fontSize:'11px',color:'rgba(255,255,255,0.3)'}}>{formatDate(match.date)}</span>
+                    <span style={{fontSize:'11px',color:'rgba(255,255,255,0.3)'}}>{formatTime(match.date)}</span>
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'12px',marginBottom:'14px'}}>
                     <div style={{textAlign:'center'}}>
@@ -218,8 +267,8 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                 </div>
               );
             })}
-            {filteredMatches.length===0&&(
-              <div style={{...card,padding:'40px',textAlign:'center',color:'rgba(255,255,255,0.3)'}}>No hay partidos con este filtro</div>
+            {matchesForDay.length===0&&(
+              <div style={{...card,padding:'40px',textAlign:'center',color:'rgba(255,255,255,0.3)'}}>No hay partidos este día</div>
             )}
           </div>
         </>
@@ -338,8 +387,8 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
       {activeSection==='reset' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
-            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔄 Resetear pronósticos</h3>
-            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Borra pronósticos y puntos. Los usuarios y campeón pronosticado se mantienen.</p>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔄 Resetear</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Los usuarios y campeón pronosticado se mantienen siempre.</p>
           </div>
           <div style={{padding:'16px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',marginBottom:'16px'}}>
             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.6)',lineHeight:'1.8'}}>
