@@ -76,11 +76,26 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
     return canPredict && !currentUser.predictions?.[m.id] && m.status !== 'finished';
   });
 
+  // Grupos abiertos sin pronosticar
+  const pendingGroups = useMemo(() => {
+    const allGroups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+    return allGroups.filter(g => {
+      const firstMatch = matches
+        .filter(m => m.phase==='groups' && m.group===g)
+        .sort((a,b) => new Date(a.date)-new Date(b.date))[0];
+      if (!firstMatch) return false;
+      const isOpen = new Date() < new Date(firstMatch.date);
+      const hasPred = currentUser.groupPredictions?.[g];
+      return isOpen && !hasPred;
+    });
+  }, [matches, currentUser]);
+
   const s = (key) => currentUser?.stats?.[key] ?? 0;
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
 
+      {/* Bienvenida */}
       <div style={{...card, padding:'20px 22px', position:'relative', overflow:'hidden'}}>
         <div style={{position:'absolute',top:0,left:0,right:0,height:'3px',background:'linear-gradient(90deg,#16a34a,#4ade80)'}}/>
         <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px'}}>
@@ -110,6 +125,27 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
         </div>
       </div>
 
+      {/* Alerta grupos sin pronosticar */}
+      {pendingGroups.length > 0 && (
+        <div style={{padding:'14px 16px',borderRadius:'14px',background:'rgba(168,85,247,0.1)',border:'1px solid rgba(168,85,247,0.3)'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div>
+              <div style={{fontSize:'13px',fontWeight:'700',color:'#c084fc',marginBottom:'3px'}}>
+                📊 Tienes {pendingGroups.length} grupo{pendingGroups.length>1?'s':''} sin pronosticar
+              </div>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)'}}>
+                Grupo{pendingGroups.length>1?'s':''}: {pendingGroups.join(', ')} · ¡Hazlo antes de que cierren!
+              </div>
+            </div>
+            <button onClick={()=>onNavigate('groups')}
+              style={{padding:'8px 14px',borderRadius:'10px',background:'rgba(168,85,247,0.2)',border:'1px solid rgba(168,85,247,0.4)',color:'#c084fc',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap',marginLeft:'10px'}}>
+              Ir →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Alerta partidos pendientes hoy */}
       {pendingToday.length > 0 && (
         <div style={{padding:'14px 16px',borderRadius:'14px',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -125,13 +161,14 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
               </div>
             </div>
             <button onClick={()=>onNavigate('matches')}
-              style={{padding:'8px 14px',borderRadius:'10px',background:'rgba(251,191,36,0.2)',border:'1px solid rgba(251,191,36,0.4)',color:'#fbbf24',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap'}}>
+              style={{padding:'8px 14px',borderRadius:'10px',background:'rgba(251,191,36,0.2)',border:'1px solid rgba(251,191,36,0.4)',color:'#fbbf24',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap',marginLeft:'10px'}}>
               Ir →
             </button>
           </div>
         </div>
       )}
 
+      {/* Próximo partido */}
       {nextMatch && (
         <div style={{...card,padding:'18px 20px',position:'relative',overflow:'hidden'}}>
           <div style={{position:'absolute',top:0,left:0,right:0,height:'3px',background:'linear-gradient(90deg,#3b82f6,#60a5fa)'}}/>
@@ -159,7 +196,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)'}}>
               <Clock size={12} style={{display:'inline',marginRight:'4px'}}/>
-              {formatDate(nextMatch.date)} · {formatTime(nextMatch.date)} · {nextMatch.venue}
+              {formatDate(nextMatch.date)} · {formatTime(nextMatch.date)}
             </div>
             {!currentUser.predictions?.[nextMatch.id] && (
               <button onClick={()=>onNavigate('matches')}
@@ -171,6 +208,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
         </div>
       )}
 
+      {/* Partidos de hoy */}
       {todayMatches.length > 0 && (
         <div style={{...card,padding:'16px 18px'}}>
           <div style={{fontSize:'11px',fontWeight:'600',color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'12px'}}>
@@ -206,6 +244,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
         </div>
       )}
 
+      {/* Último resultado */}
       {lastMatch && (
         <div style={{...card,padding:'16px 18px'}}>
           <div style={{fontSize:'11px',fontWeight:'600',color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'12px'}}>
@@ -228,6 +267,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
         </div>
       )}
 
+      {/* Mini ranking */}
       {sortedUsers.length > 0 && (
         <div style={{...card,padding:'16px 18px'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
@@ -252,7 +292,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
                   </span>
                   <span style={{fontSize:'20px'}}>{user.avatar?.length<=2?user.avatar:'👤'}</span>
                   <span style={{fontSize:'13px',fontWeight:'500',color:isMe?'#4ade80':'rgba(255,255,255,0.8)',flex:1}}>
-                    {user.nickname||user.name}
+                    {user.name}{user.nickname?` "${user.nickname}"`:''} 
                     {isMe&&<span style={{fontSize:'10px',color:'#4ade80',marginLeft:'6px'}}>tú</span>}
                   </span>
                   <span style={{fontSize:'16px',fontWeight:'800',color:'#4ade80'}}>{user.points||0}</span>
@@ -263,7 +303,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
               <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'8px 10px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)'}}>
                 <span style={{fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.4)',width:'22px',textAlign:'center'}}>{myPosition}</span>
                 <span style={{fontSize:'20px'}}>{currentUser.avatar?.length<=2?currentUser.avatar:'👤'}</span>
-                <span style={{fontSize:'13px',fontWeight:'500',color:'#4ade80',flex:1}}>{currentUser.nickname||currentUser.name} <span style={{fontSize:'10px'}}>tú</span></span>
+                <span style={{fontSize:'13px',fontWeight:'500',color:'#4ade80',flex:1}}>{currentUser.name}{currentUser.nickname?` "${currentUser.nickname}"`:''} <span style={{fontSize:'10px'}}>tú</span></span>
                 <span style={{fontSize:'16px',fontWeight:'800',color:'#4ade80'}}>{currentUser.points||0}</span>
               </div>
             )}
