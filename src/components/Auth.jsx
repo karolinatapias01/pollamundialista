@@ -15,6 +15,9 @@ const Flag = ({ code, size = 32 }) => {
   );
 };
 
+const normalize = (str) => str.toLowerCase().trim()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 const Auth = ({ onLogin, onRegister, users }) => {
   const [mode, setMode] = useState('login');
   const [accessCode, setAccessCode] = useState('');
@@ -39,10 +42,8 @@ const Auth = ({ onLogin, onRegister, users }) => {
     setError('');
     if (accessCode.toLowerCase() !== ACCESS_CODE) { setError('Código de acceso incorrecto'); return; }
     if (!name.trim()) { setError('Ingresa tu nombre'); return; }
-    // Buscar en los usuarios que vienen de Firebase en tiempo real
-    const user = users.find(u => u.name.toLowerCase() === name.trim().toLowerCase());
+    const user = users.find(u => normalize(u.name) === normalize(name));
     if (!user) { setError('Usuario no encontrado. ¿Necesitas registrarte?'); return; }
-    // Pasar el usuario fresco de Firebase (no del localStorage)
     onLogin(user);
   };
 
@@ -51,7 +52,7 @@ const Auth = ({ onLogin, onRegister, users }) => {
     setError('');
     if (accessCode.toLowerCase() !== ACCESS_CODE) { setError('Código de acceso incorrecto'); return; }
     if (!name.trim()) { setError('Ingresa tu nombre'); return; }
-    if (users.find(u => u.name.toLowerCase() === name.trim().toLowerCase())) {
+    if (users.find(u => normalize(u.name) === normalize(name))) {
       setError('Este nombre ya está registrado. Intenta iniciar sesión.'); return;
     }
     setStep(2);
@@ -82,7 +83,6 @@ const Auth = ({ onLogin, onRegister, users }) => {
   };
   const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '500', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' };
 
-  // Pantalla de espera después de registrarse
   if (registered) {
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0a0e1a 0%,#0f1f0f 50%,#0a1628 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
