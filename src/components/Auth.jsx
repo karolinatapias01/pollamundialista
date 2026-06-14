@@ -20,7 +20,7 @@ const normalize = (str) => str.toLowerCase().trim()
 
 const Auth = ({ onLogin, onRegister, users }) => {
   const [mode, setMode] = useState('login');
-  const [accessCode, setAccessCode] = useState('');
+  const [accessCode, setAccessCode] = useState('pollamundialista');
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(null);

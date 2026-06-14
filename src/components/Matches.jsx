@@ -76,8 +76,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
 
   const canPredict = (match) => {
     if (match.status==='finished') return false;
-    // Permite pronosticar hasta 10 minutos después de iniciar
-    return new Date() < new Date(new Date(match.date).getTime()+10*60*1000);
+    return new Date() < new Date(new Date(match.date).getTime()-10*60*1000);
   };
 
   const getUserPrediction = (matchId) => currentUser.predictions?.[matchId];
@@ -270,7 +269,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                           Tu: {userPred.homeScore!==undefined?`${userPred.homeScore}-${userPred.awayScore}`:userPred.result==='home'?`Gana ${homeTeam?.name}`:userPred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
                         </span>
                         <span style={{fontSize:'13px',fontWeight:'600',color:exact?'#fde047':correct?'#4ade80':'#f87171'}}>
-                          {exact?'🎯 Exacto +4':correct?'✓ Correcto +1':'✗ Incorrecto'}
+                          {exact?'🎯 Exacto +3':correct?'✓ Correcto +1':'✗ Incorrecto'}
                         </span>
                       </div>
                     );
@@ -348,6 +347,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                 </div>
               )}
 
+              {/* No aprobado */}
               {!isFinished&&canPred&&!isApproved&&(
                 <div style={{padding:'14px',borderRadius:'12px',background:'rgba(249,115,22,0.08)',border:'1px solid rgba(249,115,22,0.2)',textAlign:'center'}}>
                   <div style={{fontSize:'24px',marginBottom:'8px'}}>⏳</div>
@@ -356,6 +356,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                 </div>
               )}
 
+              {/* Aprobado — formulario */}
               {!isFinished&&canPred&&isApproved&&(
                 <div style={{padding:'14px',borderRadius:'12px',background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.15)'}}>
                   {userPred&&!predictions[match.id]?(
@@ -387,7 +388,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                       </div>
                       <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:'12px',marginBottom:'10px'}}>
                         <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',textAlign:'center',marginBottom:'8px'}}>
-                          ¿Marcador exacto? <span style={{color:'#fde047'}}>(+4 pts total)</span>
+                          ¿Marcador exacto? <span style={{color:'#fde047'}}>(+3 pts)</span>
                         </div>
                         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'10px'}}>
                           <input type="number" min="0" max="20" placeholder="0"
@@ -422,6 +423,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                 <div style={{padding:'10px 14px',borderRadius:'10px',background:'rgba(107,114,128,0.08)',border:'1px solid rgba(107,114,128,0.15)',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
                   <Lock size={14} style={{color:'rgba(255,255,255,0.3)'}}/>
                   <span style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',fontWeight:'500'}}>Pronósticos cerrados</span>
+                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.25)'}}>· Menos de 10 min</span>
                 </div>
               )}
             </div>
