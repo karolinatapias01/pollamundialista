@@ -7,13 +7,19 @@ import { matches as initialMatches } from '../data/matches';
 
 const useAppState = () => {
   const [users,       setUsers]           = useState([]);
-  const [currentUser, setCurrentUserState] = useState(() => {
-    const s = localStorage.getItem('polla_currentUser');
-    return s ? JSON.parse(s) : null;
-  });
+  const [currentUser, setCurrentUserState] = useState(null);
   const [matches,   setMatches]   = useState(initialMatches);
   const [reactions, setReactions] = useState({});
   const [loading,   setLoading]   = useState(true);
+
+  // Al cargar la app verificar si hay sesión guardada y cargar datos frescos
+  useEffect(() => {
+    const saved = localStorage.getItem('polla_currentUser');
+    if (!saved) return;
+    const savedUser = JSON.parse(saved);
+    // Se cargará cuando lleguen los usuarios de Firebase
+    setCurrentUserState({ ...savedUser, _loading: true });
+  }, []);
 
   const setCurrentUser = (user) => {
     setCurrentUserState(user);
@@ -71,7 +77,7 @@ const useAppState = () => {
       points: 0,
       predictions: {},
       groupPredictions: {},
-      approved: users.length === 0, // El primer usuario (admin) se aprueba automáticamente
+      approved: users.length === 0,
       stats: {
         correctPredictions: 0,
         incorrectPredictions: 0,
@@ -100,8 +106,7 @@ const useAppState = () => {
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) return;
     const user = userSnap.data();
-
-    if (!user.approved) throw new Error('Usuario no aprobado');
+    if (!user.approved && !user.isAdmin) throw new Error('Usuario no aprobado');
 
     const prediction = { result };
     if (homeScore !== undefined && homeScore !== null && !isNaN(homeScore)) {
@@ -126,7 +131,7 @@ const useAppState = () => {
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) return;
     const user = userSnap.data();
-    if (!user.approved) throw new Error('Usuario no aprobado');
+    if (!user.approved && !user.isAdmin) throw new Error('Usuario no aprobado');
     const updatedGroupPredictions = {
       ...(user.groupPredictions || {}),
       [group]: { first, second }
@@ -255,6 +260,35 @@ const useAppState = () => {
     await deleteDoc(doc(db, 'users', userId));
   };
 
+  const resetAllUsers = async () => {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    for (const userDoc of usersSnap.docs) {
+      await updateDoc(doc(db, 'users', userDoc.id), {
+        points: 0,
+        predictions: {},
+        groupPredictions: {},
+        championCorrect: false,
+        groupResults: {},
+        stats: {
+          correctPredictions: 0,
+          incorrectPredictions: 0,
+          exactScores: 0,
+          currentStreak: 0,
+          maxStreak: 0,
+          totalPredictions: 0,
+        }
+      });
+    }
+    const matchesSnap = await getDocs(collection(db, 'matches'));
+    for (const matchDoc of matchesSnap.docs) {
+      await updateDoc(doc(db, 'matches', matchDoc.id), {
+        status: 'pending',
+        homeScore: null,
+        awayScore: null,
+      });
+    }
+  };
+
   const addReaction = async (matchId, userId, emoji) => {
     const ref = doc(db, 'reactions', String(matchId));
     const snap = await getDoc(ref);
@@ -277,7 +311,7 @@ const useAppState = () => {
     saveGroupPrediction, updateMatchResult,
     updateGroupResult, updateChampion,
     addReaction, removeReaction, deleteUser,
-    approveUser, rejectUser
+    approveUser, rejectUser, resetAllUsers
   };
 };
 

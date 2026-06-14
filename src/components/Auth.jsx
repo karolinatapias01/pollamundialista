@@ -26,7 +26,7 @@ const Auth = ({ onLogin, onRegister, users }) => {
   const [step, setStep] = useState(1);
   const [search, setSearch] = useState('');
   const [registered, setRegistered] = useState(false);
-  const [registeredUser, setRegisteredUser] = useState(null);
+  const [registeredName, setRegisteredName] = useState('');
 
   const ACCESS_CODE = 'pollamundialista';
 
@@ -39,13 +39,10 @@ const Auth = ({ onLogin, onRegister, users }) => {
     setError('');
     if (accessCode.toLowerCase() !== ACCESS_CODE) { setError('Código de acceso incorrecto'); return; }
     if (!name.trim()) { setError('Ingresa tu nombre'); return; }
-    const user = users.find(u => u.name.toLowerCase() === name.toLowerCase());
+    // Buscar en los usuarios que vienen de Firebase en tiempo real
+    const user = users.find(u => u.name.toLowerCase() === name.trim().toLowerCase());
     if (!user) { setError('Usuario no encontrado. ¿Necesitas registrarte?'); return; }
-    if (!user.approved && !user.isAdmin) {
-      setRegisteredUser(user);
-      setRegistered(true);
-      return;
-    }
+    // Pasar el usuario fresco de Firebase (no del localStorage)
     onLogin(user);
   };
 
@@ -54,7 +51,7 @@ const Auth = ({ onLogin, onRegister, users }) => {
     setError('');
     if (accessCode.toLowerCase() !== ACCESS_CODE) { setError('Código de acceso incorrecto'); return; }
     if (!name.trim()) { setError('Ingresa tu nombre'); return; }
-    if (users.find(u => u.name.toLowerCase() === name.toLowerCase())) {
+    if (users.find(u => u.name.toLowerCase() === name.trim().toLowerCase())) {
       setError('Este nombre ya está registrado. Intenta iniciar sesión.'); return;
     }
     setStep(2);
@@ -70,11 +67,10 @@ const Auth = ({ onLogin, onRegister, users }) => {
     e.preventDefault();
     if (!selectedChampion) { setError('Selecciona tu pronóstico del campeón'); return; }
     const newUser = await onRegister(name, nickname, selectedAvatar, selectedChampion);
-    // Si es el primer usuario (admin) entra directo, si no muestra pantalla de espera
     if (newUser.isAdmin) {
       onLogin(newUser);
     } else {
-      setRegisteredUser(newUser);
+      setRegisteredName(name);
       setRegistered(true);
     }
   };
@@ -86,15 +82,13 @@ const Auth = ({ onLogin, onRegister, users }) => {
   };
   const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '500', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' };
 
-  // Pantalla de espera de aprobación
+  // Pantalla de espera después de registrarse
   if (registered) {
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0a0e1a 0%,#0f1f0f 50%,#0a1628 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
         <div style={{ width: '100%', maxWidth: '420px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '64px', marginBottom: '20px' }}>⏳</div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'white', marginBottom: '12px' }}>
-            ¡Registro exitoso!
-          </h2>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'white', marginBottom: '12px' }}>¡Registro exitoso!</h2>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.6', marginBottom: '24px' }}>
             Tu cuenta está pendiente de aprobación. El administrador te activará una vez confirme tu pago de <strong style={{ color: 'white' }}>$15.000</strong>.
           </p>
@@ -102,11 +96,8 @@ const Auth = ({ onLogin, onRegister, users }) => {
             <div style={{ fontSize: '14px', color: '#fb923c', fontWeight: '600', marginBottom: '6px' }}>¿Ya pagaste?</div>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5' }}>
               Avísale al administrador con tu nombre:<br/>
-              <strong style={{ color: 'white' }}>{name}</strong>
+              <strong style={{ color: 'white' }}>{registeredName}</strong>
             </div>
-          </div>
-          <div style={{ padding: '14px', borderRadius: '12px', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.15)', marginBottom: '24px' }}>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Tu pronóstico del campeón quedó guardado ✓</div>
           </div>
           <button onClick={() => { setRegistered(false); setMode('login'); setStep(1); setName(''); setAccessCode(''); }}
             style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -211,7 +202,7 @@ const Auth = ({ onLogin, onRegister, users }) => {
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
                     background: selectedAvatar === team.id ? 'rgba(74,222,128,0.15)' : 'transparent',
                     border: selectedAvatar === team.id ? '1px solid rgba(74,222,128,0.4)' : '1px solid transparent',
-                    cursor: 'pointer', marginBottom: '2px', transition: 'all 0.15s' }}>
+                    cursor: 'pointer', marginBottom: '2px' }}>
                   <Flag code={team.flagCode} size={24} />
                   <span style={{ fontSize: '13px', fontWeight: '500', color: selectedAvatar === team.id ? '#4ade80' : 'rgba(255,255,255,0.8)' }}>{team.name}</span>
                   {selectedAvatar === team.id && <span style={{ marginLeft: 'auto', color: '#4ade80' }}>✓</span>}
@@ -242,7 +233,7 @@ const Auth = ({ onLogin, onRegister, users }) => {
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
                     background: selectedChampion === team.id ? 'rgba(250,204,21,0.12)' : 'transparent',
                     border: selectedChampion === team.id ? '1px solid rgba(250,204,21,0.4)' : '1px solid transparent',
-                    cursor: 'pointer', marginBottom: '2px', transition: 'all 0.15s' }}>
+                    cursor: 'pointer', marginBottom: '2px' }}>
                   <Flag code={team.flagCode} size={24} />
                   <span style={{ fontSize: '13px', fontWeight: '500', color: selectedChampion === team.id ? '#fde047' : 'rgba(255,255,255,0.8)' }}>{team.name}</span>
                   {selectedChampion === team.id && <span style={{ marginLeft: 'auto', fontSize: '16px' }}>🏆</span>}
