@@ -79,6 +79,22 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
     return new Date() < new Date(new Date(match.date).getTime()-10*60*1000);
   };
 
+  // Función para calcular resultado y exactitud de un pronóstico
+  const calcPredResult = (pred, match) => {
+    const hasBothScores = pred.homeScore !== undefined && pred.awayScore !== undefined;
+    const actualResult = match.homeScore > match.awayScore ? 'home'
+      : match.homeScore < match.awayScore ? 'away' : 'draw';
+    const predResult = pred.result || (hasBothScores
+      ? (pred.homeScore > pred.awayScore ? 'home'
+        : pred.homeScore < pred.awayScore ? 'away' : 'draw')
+      : null);
+    const correct = predResult !== null && predResult === actualResult;
+    const exact = hasBothScores && correct
+      && parseInt(pred.homeScore) === parseInt(match.homeScore)
+      && parseInt(pred.awayScore) === parseInt(match.awayScore);
+    return { correct, exact, predResult, actualResult, hasBothScores };
+  };
+
   const getUserPrediction = (matchId) => currentUser.predictions?.[matchId];
 
   const setPredField = (matchId, field, value) =>
@@ -259,17 +275,14 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
               {isFinished&&(
                 <div>
                   {userPred&&(()=>{
-                    const actualResult=match.homeScore>match.awayScore?'home':match.homeScore<match.awayScore?'away':'draw';
-                    const predResult=userPred.result||(userPred.homeScore>userPred.awayScore?'home':userPred.homeScore<userPred.awayScore?'away':'draw');
-                    const correct=predResult===actualResult;
-                    const exact=userPred.homeScore!==undefined&&userPred.awayScore!==undefined&&parseInt(userPred.homeScore)===parseInt(match.homeScore)&&parseInt(userPred.awayScore)===parseInt(match.awayScore);
+                    const { correct, exact } = calcPredResult(userPred, match);
                     return(
                       <div style={{padding:'10px 14px',borderRadius:'10px',marginBottom:'10px',display:'flex',alignItems:'center',justifyContent:'space-between',background:correct?'rgba(22,163,74,0.1)':'rgba(239,68,68,0.08)',border:`1px solid ${correct?'rgba(22,163,74,0.2)':'rgba(239,68,68,0.2)'}`}}>
                         <span style={{fontSize:'13px',color:'rgba(255,255,255,0.5)'}}>
-                          Tu: {userPred.homeScore!==undefined?`${userPred.homeScore}-${userPred.awayScore}`:userPred.result==='home'?`Gana ${homeTeam?.name}`:userPred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
+                          Tu: {userPred.homeScore!==undefined&&userPred.awayScore!==undefined?`${userPred.homeScore}-${userPred.awayScore}`:userPred.result==='home'?`Gana ${homeTeam?.name}`:userPred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
                         </span>
                         <span style={{fontSize:'13px',fontWeight:'600',color:exact?'#fde047':correct?'#4ade80':'#f87171'}}>
-                          {exact?'🎯 Exacto +3':correct?'✓ Correcto +1':'✗ Incorrecto'}
+                          {exact?'🎯 Exacto +4':correct?'✓ Correcto +1':'✗ Incorrecto'}
                         </span>
                       </div>
                     );
@@ -280,10 +293,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                       .filter(u=>u.id!==currentUser.id&&u.predictions?.[match.id])
                       .map(u=>{
                         const pred=u.predictions[match.id];
-                        const actualResult=match.homeScore>match.awayScore?'home':match.homeScore<match.awayScore?'away':'draw';
-                        const predResult=pred.result||(pred.homeScore>pred.awayScore?'home':pred.homeScore<pred.awayScore?'away':'draw');
-                        const correct=predResult===actualResult;
-                        const exact=pred.homeScore!==undefined&&pred.awayScore!==undefined&&parseInt(pred.homeScore)===parseInt(match.homeScore)&&parseInt(pred.awayScore)===parseInt(match.awayScore);
+                        const { correct, exact } = calcPredResult(pred, match);
                         return {user:u,pred,correct,exact};
                       });
                     if (!otherPreds.length) return null;
@@ -303,7 +313,10 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                                 }
                                 <span style={{color:'rgba(255,255,255,0.7)',flex:1}}>{user.name}{user.nickname?` "${user.nickname}"`:''}</span>
                                 <span style={{color:'rgba(255,255,255,0.5)'}}>
-                                  {pred.homeScore!==undefined?`${pred.homeScore}-${pred.awayScore}`:pred.result==='home'?`Gana ${homeTeam?.name}`:pred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
+                                  {pred.homeScore!==undefined&&pred.awayScore!==undefined
+                                    ?`${pred.homeScore}-${pred.awayScore}`
+                                    :pred.result==='home'?`Gana ${homeTeam?.name}`
+                                    :pred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
                                 </span>
                                 <span style={{fontWeight:'600',color:exact?'#fde047':correct?'#4ade80':'#f87171'}}>
                                   {exact?'🎯':correct?'✓':'✗'}
@@ -347,7 +360,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                 </div>
               )}
 
-              {/* No aprobado */}
               {!isFinished&&canPred&&!isApproved&&(
                 <div style={{padding:'14px',borderRadius:'12px',background:'rgba(249,115,22,0.08)',border:'1px solid rgba(249,115,22,0.2)',textAlign:'center'}}>
                   <div style={{fontSize:'24px',marginBottom:'8px'}}>⏳</div>
@@ -356,14 +368,13 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                 </div>
               )}
 
-              {/* Aprobado — formulario */}
               {!isFinished&&canPred&&isApproved&&(
                 <div style={{padding:'14px',borderRadius:'12px',background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.15)'}}>
                   {userPred&&!predictions[match.id]?(
                     <div style={{textAlign:'center'}}>
                       <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginBottom:'4px'}}>✓ Pronóstico guardado</div>
                       <div style={{fontSize:'14px',fontWeight:'700',color:'#4ade80',marginBottom:'8px'}}>
-                        {userPred.homeScore!==undefined?`${userPred.homeScore} - ${userPred.awayScore}`:userPred.result==='home'?`Gana ${homeTeam?.name}`:userPred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
+                        {userPred.homeScore!==undefined&&userPred.awayScore!==undefined?`${userPred.homeScore} - ${userPred.awayScore}`:userPred.result==='home'?`Gana ${homeTeam?.name}`:userPred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
                       </div>
                       <button onClick={()=>setPredictions(prev=>({...prev,[match.id]:{result:userPred.result,home:userPred.homeScore,away:userPred.awayScore}}))}
                         style={{fontSize:'12px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>
@@ -388,7 +399,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                       </div>
                       <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:'12px',marginBottom:'10px'}}>
                         <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',textAlign:'center',marginBottom:'8px'}}>
-                          ¿Marcador exacto? <span style={{color:'#fde047'}}>(+3 pts)</span>
+                          ¿Marcador exacto? <span style={{color:'#fde047'}}>(+4 pts total)</span>
                         </div>
                         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'10px'}}>
                           <input type="number" min="0" max="20" placeholder="0"
