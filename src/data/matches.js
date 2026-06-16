@@ -70,8 +70,8 @@ export const matches = [
   // ── GRUPO I: Francia, Senegal, Irak, Noruega ──
   { id: 49, phase: 'groups', group: 'I', homeTeam: 'fra', awayTeam: 'sen', date: '2026-06-16T14:00:00-05:00', venue: 'Nueva York',   status: 'pending' },
   { id: 50, phase: 'groups', group: 'I', homeTeam: 'irq', awayTeam: 'nor', date: '2026-06-16T17:00:00-05:00', venue: 'Boston',       status: 'pending' },
-  { id: 51, phase: 'groups', group: 'I', homeTeam: 'fra', awayTeam: 'irq', date: '2026-06-22T16:00:00-05:00', venue: 'Filadelfia',   status: 'pending' },
-  { id: 52, phase: 'groups', group: 'I', homeTeam: 'nor', awayTeam: 'sen', date: '2026-06-22T19:00:00-05:00', venue: 'Nueva York',   status: 'pending' },
+  { id: 51, phase: 'groups', group: 'I', homeTeam: 'fra', awayTeam: 'irq', date: '2026-06-22T22:00:00-05:00', venue: 'Filadelfia',   status: 'pending' },
+  { id: 52, phase: 'groups', group: 'I', homeTeam: 'nor', awayTeam: 'sen', date: '2026-06-22T22:00:00-05:00', venue: 'Nueva York',   status: 'pending' },
   { id: 53, phase: 'groups', group: 'I', homeTeam: 'nor', awayTeam: 'fra', date: '2026-06-26T14:00:00-05:00', venue: 'Boston',       status: 'pending' },
   { id: 54, phase: 'groups', group: 'I', homeTeam: 'sen', awayTeam: 'irq', date: '2026-06-26T14:00:00-05:00', venue: 'Kansas City',  status: 'pending' },
 
