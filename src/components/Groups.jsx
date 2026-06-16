@@ -58,7 +58,11 @@ const Groups = ({ currentUser, onSaveGroupPrediction, users, matches, groupsForc
   const liveMatches = matches || allMatchesData;
 
  const isGroupOpen = (group) => {
-  return true; // Todos los grupos abiertos
+  if (groupsForceOpen) return true;
+  const gMatches = liveMatches.filter(m => m.phase==='groups' && m.group===group);
+  if (!gMatches.length) return false;
+  const firstDate = new Date(Math.min(...gMatches.map(m => new Date(m.date))));
+  return new Date() < firstDate;
 };
 
   const standings = useMemo(() => calcStandings(selectedGroup, liveMatches), [selectedGroup, liveMatches]);
