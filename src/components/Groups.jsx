@@ -50,15 +50,15 @@ const calcStandings = (group, liveMatches) => {
   });
 };
 
-const Groups = ({ currentUser, onSaveGroupPrediction, users, matches }) => {
+const Groups = ({ currentUser, onSaveGroupPrediction, users, matches, groupsForceOpen }) => {
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [activeTab, setActiveTab] = useState('standings');
   const [selections, setSelections] = useState({});
 
   const liveMatches = matches || allMatchesData;
 
-  // Usa los matches de Firebase para saber si el grupo está abierto
   const isGroupOpen = (group) => {
+    if (groupsForceOpen) return true;
     const gMatches = liveMatches.filter(m => m.phase==='groups' && m.group===group);
     if (!gMatches.length) return false;
     const firstDate = new Date(Math.min(...gMatches.map(m => new Date(m.date))));
@@ -113,6 +113,12 @@ const Groups = ({ currentUser, onSaveGroupPrediction, users, matches }) => {
           ))}
         </div>
       </div>
+
+      {groupsForceOpen && (
+        <div style={{padding:'10px 14px',borderRadius:'12px',background:'rgba(74,222,128,0.1)',border:'1px solid rgba(74,222,128,0.3)',marginBottom:'12px',textAlign:'center'}}>
+          <span style={{fontSize:'13px',color:'#4ade80',fontWeight:'600'}}>🔓 Todos los grupos están abiertos para pronosticar</span>
+        </div>
+      )}
 
       <div style={{...card, padding:'12px 14px', marginBottom:'12px'}}>
         <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>

@@ -11,6 +11,7 @@ const useAppState = () => {
   const [matches,   setMatches]   = useState(initialMatches);
   const [reactions, setReactions] = useState({});
   const [loading,   setLoading]   = useState(true);
+  const [groupsForceOpen, setGroupsForceOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('polla_currentUser');
@@ -64,6 +65,14 @@ const useAppState = () => {
       const data = {};
       snap.docs.forEach(d => { data[d.id] = d.data(); });
       setReactions(data);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'groups'), (snap) => {
+      if (snap.exists()) setGroupsForceOpen(snap.data().forceOpen || false);
+      else setGroupsForceOpen(false);
     });
     return unsub;
   }, []);
@@ -292,25 +301,11 @@ const useAppState = () => {
   };
 
   const openAllGroups = async () => {
-    const futureDate = new Date(Date.now() + 24*60*60*1000).toISOString();
-    const matchesSnap = await getDocs(collection(db, 'matches'));
-    for (const matchDoc of matchesSnap.docs) {
-      const m = matchDoc.data();
-      if (m.phase === 'groups' && m.status !== 'finished') {
-        await updateDoc(doc(db, 'matches', matchDoc.id), { date: futureDate });
-      }
-    }
+    await setDoc(doc(db, 'settings', 'groups'), { forceOpen: true });
   };
 
   const closeAllGroups = async () => {
-    const pastDate = new Date(Date.now() - 24*60*60*1000).toISOString();
-    const matchesSnap = await getDocs(collection(db, 'matches'));
-    for (const matchDoc of matchesSnap.docs) {
-      const m = matchDoc.data();
-      if (m.phase === 'groups' && m.status !== 'finished') {
-        await updateDoc(doc(db, 'matches', matchDoc.id), { date: pastDate });
-      }
-    }
+    await setDoc(doc(db, 'settings', 'groups'), { forceOpen: false });
   };
 
   const addReaction = async (matchId, userId, emoji) => {
@@ -336,7 +331,7 @@ const useAppState = () => {
     updateGroupResult, updateChampion,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
-    openAllGroups, closeAllGroups
+    openAllGroups, closeAllGroups, groupsForceOpen
   };
 };
 

@@ -83,7 +83,7 @@ function App() {
     updateGroupResult, updateChampion,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
-    openAllGroups, closeAllGroups
+    openAllGroups, closeAllGroups, groupsForceOpen
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState('home');
@@ -252,7 +252,7 @@ function App() {
       <main style={{ maxWidth:'900px', margin:'0 auto', padding:'16px 16px 100px' }}>
         {activeTab==='home'    && <Home users={users} currentUser={currentUser} matches={matches} onNavigate={setActiveTab}/>}
         {activeTab==='matches' && <Matches matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users}/>}
-        {activeTab==='groups'  && <Groups currentUser={currentUser} onSaveGroupPrediction={saveGroupPrediction} users={users} matches={matches}/>}
+        {activeTab==='groups'  && <Groups currentUser={currentUser} onSaveGroupPrediction={saveGroupPrediction} users={users} matches={matches} groupsForceOpen={groupsForceOpen}/>}
         {activeTab==='results' && <Results matches={matches} currentUser={currentUser} users={users}/>}
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
         {activeTab==='news'    && <News/>}
