@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Save, X, Edit2, AlertCircle, Trash2, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTeamById, teams } from '../data/teams';
 import { matches as allMatches } from '../data/matches';
@@ -22,7 +22,7 @@ const getTeamsByGroup = (group) => {
 const toColDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 const todayCol = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
@@ -34,24 +34,15 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [championId, setChampionId] = useState('');
   const [championSaved, setChampionSaved] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(false);
 
   const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
   const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
 
-  // Días disponibles con partidos
-  const availableDays = useMemo(() => {
-    const days = new Set(matches.map(m => toColDate(m.date)));
-    return [...days].sort();
-  }, [matches]);
-
+  const availableDays = [...new Set(matches.map(m => toColDate(m.date)))].sort();
   const effectiveDate = availableDays.includes(selectedDate) ? selectedDate : (availableDays.find(d => d >= todayCol()) || availableDays[0] || selectedDate);
-
-  const matchesForDay = useMemo(() =>
-    matches.filter(m => toColDate(m.date) === effectiveDate)
-      .sort((a,b) => new Date(a.date) - new Date(b.date)),
-    [matches, effectiveDate]
-  );
-
+  const matchesForDay = matches.filter(m => toColDate(m.date) === effectiveDate).sort((a,b) => new Date(a.date)-new Date(b.date));
   const currentDayIndex = availableDays.indexOf(effectiveDate);
   const prevDay = currentDayIndex > 0 ? availableDays[currentDayIndex-1] : null;
   const nextDay = currentDayIndex < availableDays.length-1 ? availableDays[currentDayIndex+1] : null;
@@ -172,7 +163,6 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
       {/* PARTIDOS POR FECHA */}
       {activeSection==='matches' && (
         <>
-          {/* Navegador de fechas */}
           <div style={{...card,padding:'12px 16px'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
               <button onClick={()=>prevDay&&setSelectedDate(prevDay)} disabled={!prevDay}
@@ -385,34 +375,74 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
 
       {/* RESETEAR */}
       {activeSection==='reset' && (
-        <div style={{...card,padding:'20px'}}>
-          <div style={{marginBottom:'16px'}}>
-            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔄 Resetear</h3>
-            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Los usuarios y campeón pronosticado se mantienen siempre.</p>
-          </div>
-          <div style={{padding:'16px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',marginBottom:'16px'}}>
-            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.6)',lineHeight:'1.8'}}>
-              ✓ Puntos → 0<br/>
-              ✓ Pronósticos de partidos → borrados<br/>
-              ✓ Pronósticos de grupos → borrados<br/>
-              ✓ Resultados de partidos → pendientes<br/>
-              ✗ Usuarios → se mantienen<br/>
-              ✗ Campeón pronosticado → se mantiene
+        <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+
+          {/* Abrir/cerrar grupos */}
+          <div style={{...card,padding:'20px'}}>
+            <div style={{marginBottom:'16px'}}>
+              <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>📊 Pronósticos de grupos</h3>
+              <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Abre todos los grupos para que todos puedan pronosticar</p>
+            </div>
+            <div style={{display:'flex',gap:'10px'}}>
+              <button
+                disabled={loadingGroups}
+                onClick={async()=>{
+                  if(!confirm('¿Abrir todos los grupos para pronosticar?')) return;
+                  setLoadingGroups(true);
+                  await onOpenAllGroups();
+                  setGroupsOpen(true);
+                  setLoadingGroups(false);
+                  alert('✓ Grupos abiertos. Avísales a todos que pronostiquen.');
+                }}
+                style={{flex:1,padding:'12px',background:loadingGroups?'rgba(255,255,255,0.06)':'rgba(74,222,128,0.15)',border:'1px solid rgba(74,222,128,0.4)',color:'#4ade80',fontWeight:'600',fontSize:'14px',borderRadius:'10px',cursor:loadingGroups?'default':'pointer'}}>
+                {loadingGroups?'⏳ Procesando...':'🔓 Abrir todos los grupos'}
+              </button>
+              <button
+                disabled={loadingGroups}
+                onClick={async()=>{
+                  if(!confirm('¿Cerrar todos los grupos?')) return;
+                  setLoadingGroups(true);
+                  await onCloseAllGroups();
+                  setGroupsOpen(false);
+                  setLoadingGroups(false);
+                  alert('✓ Grupos cerrados.');
+                }}
+                style={{flex:1,padding:'12px',background:loadingGroups?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'600',fontSize:'14px',borderRadius:'10px',cursor:loadingGroups?'default':'pointer'}}>
+                {loadingGroups?'⏳ Procesando...':'🔒 Cerrar todos los grupos'}
+              </button>
             </div>
           </div>
-          <button
-            disabled={resetting}
-            onClick={async ()=>{
-              if(!confirm('¿Seguro? Esto borra todos los puntos y pronósticos.')) return;
-              if(!confirm('¿Está completamente seguro? Esta acción NO se puede deshacer.')) return;
-              setResetting(true);
-              await onResetAll();
-              setResetting(false);
-              alert('✓ Todo reseteado. Todos empiezan desde cero.');
-            }}
-            style={{width:'100%',padding:'14px',background:resetting?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.2)',border:'1px solid rgba(239,68,68,0.4)',color:resetting?'rgba(255,255,255,0.3)':'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:resetting?'default':'pointer'}}>
-            {resetting?'⏳ Reseteando...':'🔄 Resetear todo y empezar de cero'}
-          </button>
+
+          {/* Reset total */}
+          <div style={{...card,padding:'20px'}}>
+            <div style={{marginBottom:'16px'}}>
+              <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔄 Resetear todo</h3>
+              <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Borra pronósticos y puntos. Los usuarios y campeón pronosticado se mantienen.</p>
+            </div>
+            <div style={{padding:'16px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',marginBottom:'16px'}}>
+              <div style={{fontSize:'13px',color:'rgba(255,255,255,0.6)',lineHeight:'1.8'}}>
+                ✓ Puntos → 0<br/>
+                ✓ Pronósticos de partidos → borrados<br/>
+                ✓ Pronósticos de grupos → borrados<br/>
+                ✓ Resultados de partidos → pendientes<br/>
+                ✗ Usuarios → se mantienen<br/>
+                ✗ Campeón pronosticado → se mantiene
+              </div>
+            </div>
+            <button
+              disabled={resetting}
+              onClick={async()=>{
+                if(!confirm('¿Seguro? Esto borra todos los puntos y pronósticos.')) return;
+                if(!confirm('¿Está completamente seguro? Esta acción NO se puede deshacer.')) return;
+                setResetting(true);
+                await onResetAll();
+                setResetting(false);
+                alert('✓ Todo reseteado.');
+              }}
+              style={{width:'100%',padding:'14px',background:resetting?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.2)',border:'1px solid rgba(239,68,68,0.4)',color:resetting?'rgba(255,255,255,0.3)':'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:resetting?'default':'pointer'}}>
+              {resetting?'⏳ Reseteando...':'🔄 Resetear todo y empezar de cero'}
+            </button>
+          </div>
         </div>
       )}
 

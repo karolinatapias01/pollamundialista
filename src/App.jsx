@@ -82,7 +82,8 @@ function App() {
     saveGroupPrediction, updateMatchResult,
     updateGroupResult, updateChampion,
     addReaction, removeReaction, deleteUser,
-    approveUser, rejectUser, resetAllUsers
+    approveUser, rejectUser, resetAllUsers,
+    openAllGroups, closeAllGroups
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState('home');
@@ -97,6 +98,10 @@ function App() {
     localStorage.setItem('polla_tutorial_done', 'true');
     setShowTutorial(false);
   };
+
+  useEffect(() => {
+    if (currentUser) setActiveTab('home');
+  }, [currentUser?.id]);
 
   useEffect(() => {
     const interval = startAutoSync();
@@ -252,16 +257,14 @@ function App() {
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
         {activeTab==='news'    && <News/>}
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers}/>}
+        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups}/>}
       </main>
 
-      {/* Botón flotante reglas */}
       <button onClick={()=>setShowRules(true)}
         style={{ position:'fixed', bottom:'80px', right:'16px', zIndex:45, width:'44px', height:'44px', borderRadius:'50%', background:'linear-gradient(135deg,#7c3aed,#c026d3)', border:'none', cursor:'pointer', fontSize:'20px', boxShadow:'0 4px 20px rgba(124,58,237,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
         📋
       </button>
 
-      {/* Modal reglas */}
       {showRules && (
         <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.8)', display:'flex', alignItems:'flex-end', justifyContent:'center' }}
           onClick={()=>setShowRules(false)}>
@@ -269,7 +272,6 @@ function App() {
             onClick={e=>e.stopPropagation()}>
             <div style={{ width:'40px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.2)', margin:'0 auto 20px' }}/>
             <h2 style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'20px', textAlign:'center' }}>📋 Reglas y Puntos</h2>
-
             {[
               { title:'⚽ Pronóstico de partidos', items:[
                 { label:'Resultado correcto (G/E/P)', pts:'+1 pt', color:'#4ade80' },
@@ -296,7 +298,6 @@ function App() {
                 </div>
               </div>
             ))}
-
             <div style={{ padding:'14px', borderRadius:'12px', background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.15)', marginBottom:'16px' }}>
               <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.5)', lineHeight:'1.6' }}>
                 🔒 Los pronósticos cierran <strong style={{color:'white'}}>10 minutos</strong> antes de cada partido.<br/>
@@ -304,7 +305,6 @@ function App() {
                 💰 Inscripción: <strong style={{color:'white'}}>$15.000</strong>
               </div>
             </div>
-
             <button onClick={()=>setShowRules(false)}
               style={{ width:'100%', padding:'12px', background:'linear-gradient(135deg,#7c3aed,#c026d3)', border:'none', color:'white', fontWeight:'600', fontSize:'14px', borderRadius:'12px', cursor:'pointer' }}>
               Entendido ✓

@@ -151,19 +151,21 @@ const useAppState = () => {
 
       const actualResult = match.homeScore > match.awayScore ? 'home'
         : match.homeScore < match.awayScore ? 'away' : 'draw';
-      const predictedResult = prediction.result
-        || (prediction.homeScore > prediction.awayScore ? 'home'
-          : prediction.homeScore < prediction.awayScore ? 'away' : 'draw');
-      const isExact = prediction.homeScore !== undefined && prediction.awayScore !== undefined
+      const hasBothScores = prediction.homeScore !== undefined && prediction.awayScore !== undefined;
+      const predictedResult = prediction.result || (hasBothScores
+        ? (prediction.homeScore > prediction.awayScore ? 'home'
+          : prediction.homeScore < prediction.awayScore ? 'away' : 'draw')
+        : null);
+      const isExact = hasBothScores
         && parseInt(prediction.homeScore) === parseInt(match.homeScore)
         && parseInt(prediction.awayScore) === parseInt(match.awayScore);
 
-      if (isExact) {
-        // Marcador exacto = 1 pt por resultado + 3 pts adicionales = 4 pts total
+      if (predictedResult === null) {
+        incorrectPredictions++; currentStreak = 0;
+      } else if (isExact) {
         totalPoints += 4; exactScores++; correctPredictions++;
         currentStreak++; maxStreak = Math.max(maxStreak, currentStreak);
       } else if (predictedResult === actualResult) {
-        // Solo resultado correcto = 1 pt
         totalPoints += 1; correctPredictions++;
         currentStreak++; maxStreak = Math.max(maxStreak, currentStreak);
       } else {
@@ -289,6 +291,28 @@ const useAppState = () => {
     }
   };
 
+  const openAllGroups = async () => {
+    const futureDate = new Date(Date.now() + 24*60*60*1000).toISOString();
+    const matchesSnap = await getDocs(collection(db, 'matches'));
+    for (const matchDoc of matchesSnap.docs) {
+      const m = matchDoc.data();
+      if (m.phase === 'groups' && m.status !== 'finished') {
+        await updateDoc(doc(db, 'matches', matchDoc.id), { date: futureDate });
+      }
+    }
+  };
+
+  const closeAllGroups = async () => {
+    const pastDate = new Date(Date.now() - 24*60*60*1000).toISOString();
+    const matchesSnap = await getDocs(collection(db, 'matches'));
+    for (const matchDoc of matchesSnap.docs) {
+      const m = matchDoc.data();
+      if (m.phase === 'groups' && m.status !== 'finished') {
+        await updateDoc(doc(db, 'matches', matchDoc.id), { date: pastDate });
+      }
+    }
+  };
+
   const addReaction = async (matchId, userId, emoji) => {
     const ref = doc(db, 'reactions', String(matchId));
     const snap = await getDoc(ref);
@@ -311,7 +335,8 @@ const useAppState = () => {
     saveGroupPrediction, updateMatchResult,
     updateGroupResult, updateChampion,
     addReaction, removeReaction, deleteUser,
-    approveUser, rejectUser, resetAllUsers
+    approveUser, rejectUser, resetAllUsers,
+    openAllGroups, closeAllGroups
   };
 };
 
