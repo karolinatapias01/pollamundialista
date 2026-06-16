@@ -23,18 +23,6 @@ const getTeamsByGroup = (group) => {
   return [...ids].map(id => getTeamById(id)).filter(Boolean);
 };
 
-const getGroupStartDate = (group) => {
-  const gMatches = allMatchesData.filter(m => m.phase==='groups' && m.group===group);
-  if (!gMatches.length) return null;
-  return new Date(Math.min(...gMatches.map(m => new Date(m.date))));
-};
-
-const isGroupOpen = (group) => {
-  const start = getGroupStartDate(group);
-  if (!start) return false;
-  return new Date() < start;
-};
-
 const calcStandings = (group, liveMatches) => {
   const teams = getTeamsByGroup(group);
   const standings = {};
@@ -68,6 +56,15 @@ const Groups = ({ currentUser, onSaveGroupPrediction, users, matches }) => {
   const [selections, setSelections] = useState({});
 
   const liveMatches = matches || allMatchesData;
+
+  // Usa los matches de Firebase para saber si el grupo está abierto
+  const isGroupOpen = (group) => {
+    const gMatches = liveMatches.filter(m => m.phase==='groups' && m.group===group);
+    if (!gMatches.length) return false;
+    const firstDate = new Date(Math.min(...gMatches.map(m => new Date(m.date))));
+    return new Date() < firstDate;
+  };
+
   const standings = useMemo(() => calcStandings(selectedGroup, liveMatches), [selectedGroup, liveMatches]);
 
   const myPred = currentUser.groupPredictions?.[selectedGroup];
