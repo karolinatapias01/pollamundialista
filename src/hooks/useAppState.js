@@ -115,13 +115,13 @@ const useAppState = () => {
     const user = userSnap.data();
     if (!user.approved && !user.isAdmin) throw new Error('Usuario no aprobado');
 
-    const prediction = { result };
-    if (homeScore !== undefined && homeScore !== null && !isNaN(homeScore)) {
-      prediction.homeScore = parseInt(homeScore);
-    }
-    if (awayScore !== undefined && awayScore !== null && !isNaN(awayScore)) {
-      prediction.awayScore = parseInt(awayScore);
-    }
+    const prediction = { result, timestamp: Date.now() };
+if (homeScore !== undefined && homeScore !== null && !isNaN(homeScore)) {
+  prediction.homeScore = parseInt(homeScore);
+}
+if (awayScore !== undefined && awayScore !== null && !isNaN(awayScore)) {
+  prediction.awayScore = parseInt(awayScore);
+}
 
     const updatedPredictions = {
       ...user.predictions,
