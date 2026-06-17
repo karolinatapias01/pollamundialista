@@ -20,6 +20,46 @@ const Flag = ({ code, size = 40 }) => {
 const toColDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 const todayCol  = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 
+const formatTimestamp = (ts) => {
+  if (!ts) return null;
+  return new Date(ts).toLocaleTimeString('es-CO', {
+    timeZone: 'America/Bogota',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
+const getPredLabel = (pred, homeTeam, awayTeam) => {
+  const result = pred.result || (
+    pred.homeScore !== undefined && pred.awayScore !== undefined
+      ? pred.homeScore > pred.awayScore ? 'home'
+        : pred.homeScore < pred.awayScore ? 'away' : 'draw'
+      : null
+  );
+  const resultLabel = result === 'home' ? `Gana ${homeTeam?.name||'Local'}`
+    : result === 'away' ? `Gana ${awayTeam?.name||'Visitante'}`
+    : result === 'draw' ? 'Empate' : '—';
+  const scoreLabel = pred.homeScore !== undefined && pred.awayScore !== undefined
+    ? `${pred.homeScore}-${pred.awayScore}` : '';
+  return { resultLabel, scoreLabel, result };
+};
+
+const calcPredResult = (pred, match) => {
+  const hasBothScores = pred.homeScore !== undefined && pred.awayScore !== undefined;
+  const actualResult = match.homeScore > match.awayScore ? 'home'
+    : match.homeScore < match.awayScore ? 'away' : 'draw';
+  const predResult = pred.result || (hasBothScores
+    ? (pred.homeScore > pred.awayScore ? 'home'
+      : pred.homeScore < pred.awayScore ? 'away' : 'draw')
+    : null);
+  const correct = predResult !== null && predResult === actualResult;
+  const exact = hasBothScores && correct
+    && parseInt(pred.homeScore) === parseInt(match.homeScore)
+    && parseInt(pred.awayScore) === parseInt(match.awayScore);
+  return { correct, exact, predResult, actualResult };
+};
+
 const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReaction, onRemoveReaction, users }) => {
   const [selectedPhase, setSelectedPhase] = useState('groups');
   const [selectedGroup, setSelectedGroup] = useState('A');
@@ -79,22 +119,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
     return new Date() < new Date(new Date(match.date).getTime()-10*60*1000);
   };
 
-  // Función para calcular resultado y exactitud de un pronóstico
-  const calcPredResult = (pred, match) => {
-    const hasBothScores = pred.homeScore !== undefined && pred.awayScore !== undefined;
-    const actualResult = match.homeScore > match.awayScore ? 'home'
-      : match.homeScore < match.awayScore ? 'away' : 'draw';
-    const predResult = pred.result || (hasBothScores
-      ? (pred.homeScore > pred.awayScore ? 'home'
-        : pred.homeScore < pred.awayScore ? 'away' : 'draw')
-      : null);
-    const correct = predResult !== null && predResult === actualResult;
-    const exact = hasBothScores && correct
-      && parseInt(pred.homeScore) === parseInt(match.homeScore)
-      && parseInt(pred.awayScore) === parseInt(match.awayScore);
-    return { correct, exact, predResult, actualResult, hasBothScores };
-  };
-
   const getUserPrediction = (matchId) => currentUser.predictions?.[matchId];
 
   const setPredField = (matchId, field, value) =>
@@ -102,13 +126,12 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
 
   const handleSubmit = async (matchId) => {
     const p = predictions[matchId]||{};
-    if (!p.result && p.home===undefined) { alert('Selecciona Gana/Empate/Pierde o ingresa un marcador'); return; }
-    const result = p.result||(p.home>p.away?'home':p.home<p.away?'away':'draw');
-    const homeScore = p.home !== undefined ? parseInt(p.home) : undefined;
-    const awayScore = p.away !== undefined ? parseInt(p.away) : undefined;
+    const home = p.home !== undefined ? p.home : 0;
+    const away = p.away !== undefined ? p.away : 0;
+    const result = p.result||(home>away?'home':home<away?'away':'draw');
     setSaving(prev=>({...prev,[matchId]:true}));
     try {
-      await onMakePrediction(currentUser.id, matchId, result, homeScore, awayScore);
+      await onMakePrediction(currentUser.id, matchId, result, parseInt(home), parseInt(away));
       setPredictions(prev=>{ const n={...prev}; delete n[matchId]; return n; });
     } catch(e) {
       alert('Error al guardar. Intente de nuevo.');
@@ -215,7 +238,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
           const canPred=canPredict(match);
           const isFinished=match.status==='finished';
           const reactionCounts=getReactionCounts(match.id);
-          const localPred=predictions[match.id]||{};
+          const localPred=predictions[match.id];
           const isSaving=saving[match.id];
           const isApproved=currentUser.approved||currentUser.isAdmin;
 
@@ -249,7 +272,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                     <div style={{fontSize:'28px',fontWeight:'800',color:'white',letterSpacing:'-1px'}}>
                       {match.homeScore} <span style={{color:'rgba(255,255,255,0.3)'}}>-</span> {match.awayScore}
                     </div>
-                  ):userPred&&!predictions[match.id]?(
+                  ):userPred&&!localPred?(
                     <div>
                       {userPred.homeScore!==undefined&&userPred.awayScore!==undefined?(
                         <div style={{fontSize:'22px',fontWeight:'700',color:'#4ade80'}}>{userPred.homeScore} - {userPred.awayScore}</div>
@@ -276,14 +299,40 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                 <div>
                   {userPred&&(()=>{
                     const { correct, exact } = calcPredResult(userPred, match);
+                    const { resultLabel, scoreLabel } = getPredLabel(userPred, homeTeam, awayTeam);
+                    const actualResultLabel = match.homeScore > match.awayScore
+                      ? `Gana ${homeTeam?.name}`
+                      : match.homeScore < match.awayScore
+                      ? `Gana ${awayTeam?.name}`
+                      : 'Empate';
                     return(
-                      <div style={{padding:'10px 14px',borderRadius:'10px',marginBottom:'10px',display:'flex',alignItems:'center',justifyContent:'space-between',background:correct?'rgba(22,163,74,0.1)':'rgba(239,68,68,0.08)',border:`1px solid ${correct?'rgba(22,163,74,0.2)':'rgba(239,68,68,0.2)'}`}}>
-                        <span style={{fontSize:'13px',color:'rgba(255,255,255,0.5)'}}>
-                          Tu: {userPred.homeScore!==undefined&&userPred.awayScore!==undefined?`${userPred.homeScore}-${userPred.awayScore}`:userPred.result==='home'?`Gana ${homeTeam?.name}`:userPred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
-                        </span>
-                        <span style={{fontSize:'13px',fontWeight:'600',color:exact?'#fde047':correct?'#4ade80':'#f87171'}}>
-                          {exact?'🎯 Exacto +4':correct?'✓ Correcto +1':'✗ Incorrecto'}
-                        </span>
+                      <div style={{padding:'12px 14px',borderRadius:'10px',marginBottom:'10px',
+                        background:correct?'rgba(22,163,74,0.08)':'rgba(239,68,68,0.08)',
+                        border:`1px solid ${correct?'rgba(22,163,74,0.2)':'rgba(239,68,68,0.2)'}`}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'8px'}}>
+                          <div>
+                            <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Tu pronóstico</div>
+                            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.8)',fontWeight:'500'}}>
+                              {resultLabel}
+                              {scoreLabel && <span style={{color:'rgba(255,255,255,0.5)',marginLeft:'6px'}}>· {scoreLabel}</span>}
+                            </div>
+                            {userPred.timestamp && (
+                              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',marginTop:'3px'}}>
+                                🕐 Registrado a las {formatTimestamp(userPred.timestamp)}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{textAlign:'right'}}>
+                            <div style={{fontSize:'14px',fontWeight:'700',color:exact?'#fde047':correct?'#4ade80':'#f87171'}}>
+                              {exact?'🎯 Exacto +4':correct?'✓ Correcto +1':'✗ Incorrecto'}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:'8px'}}>
+                          <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)'}}>
+                            Resultado real: <span style={{color:'rgba(255,255,255,0.6)',fontWeight:'600'}}>{actualResultLabel} · {match.homeScore}-{match.awayScore}</span>
+                          </div>
+                        </div>
                       </div>
                     );
                   })()}
@@ -294,32 +343,41 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                       .map(u=>{
                         const pred=u.predictions[match.id];
                         const { correct, exact } = calcPredResult(pred, match);
-                        return {user:u,pred,correct,exact};
+                        const { resultLabel, scoreLabel } = getPredLabel(pred, homeTeam, awayTeam);
+                        return {user:u,pred,correct,exact,resultLabel,scoreLabel};
                       });
                     if (!otherPreds.length) return null;
                     return(
                       <div style={{marginBottom:'10px',padding:'12px',borderRadius:'10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
-                        <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'8px',fontWeight:'600',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                        <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'10px',fontWeight:'600',textTransform:'uppercase',letterSpacing:'0.05em'}}>
                           👥 Pronósticos de otros
                         </div>
-                        <div style={{display:'flex',flexDirection:'column',gap:'5px'}}>
-                          {otherPreds.map(({user,pred,correct,exact})=>{
+                        <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                          {otherPreds.map(({user,correct,exact,resultLabel,scoreLabel,pred})=>{
                             const team=getTeamById(user.avatar);
                             return(
-                              <div key={user.id} style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'12px'}}>
-                                {team?.flagCode
-                                  ?<img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={18} height={18} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
-                                  :<span style={{fontSize:'14px'}}>{user.avatar||'👤'}</span>
-                                }
-                                <span style={{color:'rgba(255,255,255,0.7)',flex:1}}>{user.name}{user.nickname?` "${user.nickname}"`:''}</span>
-                                <span style={{color:'rgba(255,255,255,0.5)'}}>
-                                  {pred.homeScore!==undefined&&pred.awayScore!==undefined
-                                    ?`${pred.homeScore}-${pred.awayScore}`
-                                    :pred.result==='home'?`Gana ${homeTeam?.name}`
-                                    :pred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
-                                </span>
-                                <span style={{fontWeight:'600',color:exact?'#fde047':correct?'#4ade80':'#f87171'}}>
-                                  {exact?'🎯':correct?'✓':'✗'}
+                              <div key={user.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 10px',borderRadius:'8px',
+                                background:correct?'rgba(22,163,74,0.06)':'rgba(239,68,68,0.06)',
+                                border:`1px solid ${correct?'rgba(22,163,74,0.15)':'rgba(239,68,68,0.15)'}`}}>
+                                <div style={{display:'flex',alignItems:'center',gap:'6px',flex:1,minWidth:0}}>
+                                  {team?.flagCode
+                                    ?<img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={18} height={18} style={{borderRadius:'50%',flexShrink:0}} onError={e=>{e.target.style.display='none';}}/>
+                                    :<span style={{fontSize:'14px',flexShrink:0}}>{user.avatar||'👤'}</span>
+                                  }
+                                  <div style={{minWidth:0}}>
+                                    <span style={{fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.8)'}}>{user.nickname||user.name}</span>
+                                    <span style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginLeft:'6px'}}>
+                                      {resultLabel}{scoreLabel?` · ${scoreLabel}`:''}
+                                    </span>
+                                    {pred.timestamp && (
+                                      <div style={{fontSize:'10px',color:'rgba(255,255,255,0.25)'}}>
+                                        🕐 {formatTimestamp(pred.timestamp)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <span style={{fontSize:'12px',fontWeight:'700',color:exact?'#fde047':correct?'#4ade80':'#f87171',flexShrink:0,marginLeft:'8px'}}>
+                                  {exact?'🎯 +4':correct?'✓ +1':'✗'}
                                 </span>
                               </div>
                             );
@@ -370,13 +428,18 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
 
               {!isFinished&&canPred&&isApproved&&(
                 <div style={{padding:'14px',borderRadius:'12px',background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.15)'}}>
-                  {userPred&&!predictions[match.id]?(
+                  {userPred&&!localPred?(
                     <div style={{textAlign:'center'}}>
                       <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginBottom:'4px'}}>✓ Pronóstico guardado</div>
-                      <div style={{fontSize:'14px',fontWeight:'700',color:'#4ade80',marginBottom:'8px'}}>
+                      <div style={{fontSize:'14px',fontWeight:'700',color:'#4ade80',marginBottom:'4px'}}>
                         {userPred.homeScore!==undefined&&userPred.awayScore!==undefined?`${userPred.homeScore} - ${userPred.awayScore}`:userPred.result==='home'?`Gana ${homeTeam?.name}`:userPred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
                       </div>
-                      <button onClick={()=>setPredictions(prev=>({...prev,[match.id]:{result:userPred.result,home:userPred.homeScore,away:userPred.awayScore}}))}
+                      {userPred.timestamp && (
+                        <div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',marginBottom:'8px'}}>
+                          🕐 Registrado a las {formatTimestamp(userPred.timestamp)}
+                        </div>
+                      )}
+                      <button onClick={()=>setPredictions(prev=>({...prev,[match.id]:{result:userPred.result||'draw',home:userPred.homeScore??0,away:userPred.awayScore??0}}))}
                         style={{fontSize:'12px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>
                         Modificar
                       </button>
@@ -385,14 +448,14 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                     <div>
                       <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'10px',textAlign:'center'}}>¿Quién gana?</div>
                       <div style={{display:'flex',gap:'6px',marginBottom:'12px'}}>
-                        <button style={btnGEP(localPred.result==='home','74,222,128')} onClick={()=>setPredField(match.id,'result','home')}>
+                        <button style={btnGEP((localPred?.result||'draw')==='home','74,222,128')} onClick={()=>setPredField(match.id,'result','home')}>
                           <div style={{marginBottom:'4px'}}><Flag code={homeTeam?.flagCode} size={20}/></div>
                           Gana
                         </button>
-                        <button style={btnGEP(localPred.result==='draw','250,204,21')} onClick={()=>setPredField(match.id,'result','draw')}>
+                        <button style={btnGEP((localPred?.result||'draw')==='draw','250,204,21')} onClick={()=>setPredField(match.id,'result','draw')}>
                           🤝<br/>Empate
                         </button>
-                        <button style={btnGEP(localPred.result==='away','96,165,250')} onClick={()=>setPredField(match.id,'result','away')}>
+                        <button style={btnGEP((localPred?.result||'draw')==='away','96,165,250')} onClick={()=>setPredField(match.id,'result','away')}>
                           <div style={{marginBottom:'4px'}}><Flag code={awayTeam?.flagCode} size={20}/></div>
                           Gana
                         </button>
@@ -402,21 +465,23 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                           ¿Marcador exacto? <span style={{color:'#fde047'}}>(+4 pts total)</span>
                         </div>
                         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'10px'}}>
-                          <input type="number" min="0" max="20" placeholder="0"
-                            value={localPred.home??''}
+                          <input type="number" min="0" max="20"
+                            value={localPred?.home??0}
                             onChange={e=>{
-                              const v=parseInt(e.target.value);
-                              setPredField(match.id,'home',isNaN(v)?undefined:v);
-                              if(!isNaN(v)&&localPred.away!==undefined) setPredField(match.id,'result',v>localPred.away?'home':v<localPred.away?'away':'draw');
+                              const v=parseInt(e.target.value)||0;
+                              setPredField(match.id,'home',v);
+                              const away=localPred?.away??0;
+                              setPredField(match.id,'result',v>away?'home':v<away?'away':'draw');
                             }}
                             style={{width:'54px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',color:'white'}}/>
                           <span style={{fontSize:'20px',color:'rgba(255,255,255,0.3)'}}>-</span>
-                          <input type="number" min="0" max="20" placeholder="0"
-                            value={localPred.away??''}
+                          <input type="number" min="0" max="20"
+                            value={localPred?.away??0}
                             onChange={e=>{
-                              const v=parseInt(e.target.value);
-                              setPredField(match.id,'away',isNaN(v)?undefined:v);
-                              if(!isNaN(v)&&localPred.home!==undefined) setPredField(match.id,'result',localPred.home>v?'home':localPred.home<v?'away':'draw');
+                              const v=parseInt(e.target.value)||0;
+                              setPredField(match.id,'away',v);
+                              const home=localPred?.home??0;
+                              setPredField(match.id,'result',home>v?'home':home<v?'away':'draw');
                             }}
                             style={{width:'54px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',color:'white'}}/>
                         </div>
