@@ -365,8 +365,15 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                                     :<span style={{fontSize:'14px',flexShrink:0}}>{user.avatar||'👤'}</span>
                                   }
                                   <div style={{minWidth:0}}>
-                                    
-                                    <span style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginLeft:'6px'}}>
+                                    <div style={{fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.85)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                      {user.name || user.nickname || 'Usuario'}
+                                      {user.nickname && user.name && user.nickname !== user.name && (
+                                        <span style={{fontSize:'10px',fontWeight:'400',color:'rgba(255,255,255,0.4)',marginLeft:'4px'}}>
+                                          ({user.nickname})
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>
                                       {resultLabel}{scoreLabel?` · ${scoreLabel}`:''}
                                     </span>
                                     {pred.timestamp && (
