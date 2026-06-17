@@ -365,13 +365,13 @@ const Matches = ({ matches, currentUser, onMakePrediction, reactions, onAddReact
                                     :<span style={{fontSize:'14px',flexShrink:0}}>{user.avatar||'👤'}</span>
                                   }
                                   <div style={{minWidth:0}}>
-                                    {user.name} <span style={{fontSize:'10px',fontWeight:'400',color:'rgba(255,255,255,0.45)'}}>({user.nickname})</span>
+                                    
                                     <span style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginLeft:'6px'}}>
                                       {resultLabel}{scoreLabel?` · ${scoreLabel}`:''}
                                     </span>
                                     {pred.timestamp && (
                                       <div style={{fontSize:'10px',color:'rgba(255,255,255,0.25)'}}>
-                                        🕐 {formatTimestamp(pred.timestamp)}
+                                        🕐 Registrado a las {formatTimestamp(pred.timestamp)}
                                       </div>
                                     )}
                                   </div>
