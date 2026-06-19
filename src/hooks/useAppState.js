@@ -43,14 +43,10 @@ const useAppState = () => {
     return unsub;
   }, []);
 
+  // ✅ CORREGIDO: ya no sobreescribe partidos si snap viene vacío
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'matches'), (snap) => {
-      if (snap.empty) {
-        initialMatches.forEach(async (m) => {
-          await setDoc(doc(db, 'matches', String(m.id)), m);
-        });
-        setMatches(initialMatches);
-      } else {
+      if (!snap.empty) {
         const data = snap.docs.map(d => ({ ...d.data(), id: parseInt(d.id) }));
         data.sort((a, b) => a.id - b.id);
         setMatches(data);
@@ -116,12 +112,12 @@ const useAppState = () => {
     if (!user.approved && !user.isAdmin) throw new Error('Usuario no aprobado');
 
     const prediction = { result, timestamp: Date.now() };
-if (homeScore !== undefined && homeScore !== null && !isNaN(homeScore)) {
-  prediction.homeScore = parseInt(homeScore);
-}
-if (awayScore !== undefined && awayScore !== null && !isNaN(awayScore)) {
-  prediction.awayScore = parseInt(awayScore);
-}
+    if (homeScore !== undefined && homeScore !== null && !isNaN(homeScore)) {
+      prediction.homeScore = parseInt(homeScore);
+    }
+    if (awayScore !== undefined && awayScore !== null && !isNaN(awayScore)) {
+      prediction.awayScore = parseInt(awayScore);
+    }
 
     const updatedPredictions = {
       ...user.predictions,
