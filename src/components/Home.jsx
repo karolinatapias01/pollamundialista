@@ -36,7 +36,11 @@ const useCountdown = (targetDate) => {
   return timeLeft;
 };
 
+const ALL_GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+
 const Home = ({ users, currentUser, matches, onNavigate }) => {
+  const [showGroupsDetail, setShowGroupsDetail] = useState(false);
+
   const sortedUsers = [...users].sort((a,b) => (b.points||0) - (a.points||0));
   const myPosition = sortedUsers.findIndex(u => u.id === currentUser.id) + 1;
 
@@ -76,10 +80,8 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
     return canPredict && !currentUser.predictions?.[m.id] && m.status !== 'finished';
   });
 
-  // Grupos abiertos sin pronosticar
   const pendingGroups = useMemo(() => {
-    const allGroups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
-    return allGroups.filter(g => {
+    return ALL_GROUPS.filter(g => {
       const firstMatch = matches
         .filter(m => m.phase==='groups' && m.group===g)
         .sort((a,b) => new Date(a.date)-new Date(b.date))[0];
@@ -89,6 +91,35 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
       return isOpen && !hasPred;
     });
   }, [matches, currentUser]);
+
+  // Grupos que ya tienen resultado asignado (groupResults en cualquier usuario)
+  const groupsWithResults = useMemo(() => {
+    // Tomamos los groupResults del currentUser (se guardan en cada usuario)
+    const results = currentUser.groupResults || {};
+    return ALL_GROUPS.filter(g => results[g]?.first && results[g]?.second);
+  }, [currentUser]);
+
+  // Calcular puntos de grupos del usuario actual
+  const myGroupPoints = useMemo(() => {
+    const results = currentUser.groupResults || {};
+    const preds = currentUser.groupPredictions || {};
+    let total = 0;
+    groupsWithResults.forEach(g => {
+      const pred = preds[g];
+      const result = results[g];
+      if (!pred || !result) return;
+      if (pred.first === result.first && pred.second === result.second) total += 10;
+      else if (
+        (pred.first === result.first || pred.first === result.second) &&
+        (pred.second === result.first || pred.second === result.second)
+      ) total += 5;
+      else if (
+        pred.first === result.first || pred.first === result.second ||
+        pred.second === result.first || pred.second === result.second
+      ) total += 2;
+    });
+    return total;
+  }, [currentUser, groupsWithResults]);
 
   const s = (key) => currentUser?.stats?.[key] ?? 0;
 
@@ -124,6 +155,112 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
           ))}
         </div>
       </div>
+
+      {/* AVISO: Puntos de grupos asignados */}
+      {groupsWithResults.length > 0 && (
+        <div style={{borderRadius:'14px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.25)',overflow:'hidden'}}>
+          <div style={{padding:'14px 16px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontSize:'13px',fontWeight:'700',color:'#4ade80',marginBottom:'3px'}}>
+                  📊 Puntos de clasificados asignados
+                </div>
+                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)'}}>
+                  {groupsWithResults.length} grupo{groupsWithResults.length>1?'s':''} calificados · Tú obtuviste{' '}
+                  <span style={{color:'#4ade80',fontWeight:'700'}}>{myGroupPoints} pts</span> de grupos
+                </div>
+              </div>
+              <button onClick={()=>setShowGroupsDetail(!showGroupsDetail)}
+                style={{padding:'6px 12px',borderRadius:'8px',background:'rgba(74,222,128,0.15)',border:'1px solid rgba(74,222,128,0.3)',color:'#4ade80',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap',marginLeft:'10px'}}>
+                {showGroupsDetail ? 'Ocultar' : 'Ver detalle'}
+              </button>
+            </div>
+          </div>
+
+          {showGroupsDetail && (
+            <div style={{borderTop:'1px solid rgba(74,222,128,0.15)',padding:'12px 16px',display:'flex',flexDirection:'column',gap:'8px'}}>
+              {groupsWithResults.map(g => {
+                const results = currentUser.groupResults || {};
+                const preds = currentUser.groupPredictions || {};
+                const result = results[g];
+                const pred = preds[g];
+                const first = getTeamById(result?.first);
+                const second = getTeamById(result?.second);
+                const predFirst = getTeamById(pred?.first);
+                const predSecond = getTeamById(pred?.second);
+
+                let pts = 0;
+                let label = '';
+                if (pred && result) {
+                  if (pred.first === result.first && pred.second === result.second) {
+                    pts = 10; label = '🥇 Orden exacto';
+                  } else if (
+                    (pred.first === result.first || pred.first === result.second) &&
+                    (pred.second === result.first || pred.second === result.second)
+                  ) {
+                    pts = 5; label = '✓ Ambos equipos';
+                  } else if (
+                    pred.first === result.first || pred.first === result.second ||
+                    pred.second === result.first || pred.second === result.second
+                  ) {
+                    pts = 2; label = '~ Un equipo';
+                  } else {
+                    pts = 0; label = '✗ Sin acierto';
+                  }
+                }
+
+                return (
+                  <div key={g} style={{padding:'10px 12px',borderRadius:'10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
+                      <span style={{fontSize:'12px',fontWeight:'700',color:'rgba(255,255,255,0.6)'}}>Grupo {g}</span>
+                      <span style={{fontSize:'13px',fontWeight:'800',color:pts>0?'#4ade80':'#f87171'}}>
+                        {pts>0?`+${pts} pts`:label||'Sin pronóstico'}
+                      </span>
+                    </div>
+                    <div style={{display:'flex',gap:'12px'}}>
+                      {/* Resultado real */}
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Resultado</div>
+                        <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                            <Flag code={first?.flagCode} size={14}/>
+                            <span style={{fontSize:'11px',color:'rgba(255,255,255,0.7)'}}>🥇 {first?.name||'—'}</span>
+                          </div>
+                          <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                            <Flag code={second?.flagCode} size={14}/>
+                            <span style={{fontSize:'11px',color:'rgba(255,255,255,0.7)'}}>🥈 {second?.name||'—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Mi pronóstico */}
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Tu pronóstico</div>
+                        {pred ? (
+                          <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                              <Flag code={predFirst?.flagCode} size={14}/>
+                              <span style={{fontSize:'11px',color:'rgba(255,255,255,0.7)'}}>🥇 {predFirst?.name||'—'}</span>
+                            </div>
+                            <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                              <Flag code={predSecond?.flagCode} size={14}/>
+                              <span style={{fontSize:'11px',color:'rgba(255,255,255,0.7)'}}>🥈 {predSecond?.name||'—'}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{fontSize:'11px',color:'rgba(255,255,255,0.3)'}}>Sin pronóstico</span>
+                        )}
+                      </div>
+                    </div>
+                    {pts > 0 && label && (
+                      <div style={{marginTop:'6px',fontSize:'10px',color:'rgba(74,222,128,0.7)'}}>{label}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Alerta grupos sin pronosticar */}
       {pendingGroups.length > 0 && (
