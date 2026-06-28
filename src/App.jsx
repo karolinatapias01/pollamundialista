@@ -251,8 +251,8 @@ function App() {
       </header>
 
       <main style={{ maxWidth:'900px', margin:'0 auto', padding:'16px 16px 100px' }}>
-        {activeTab==='home'    && <Home users={users} currentUser={currentUser} matches={matches} onNavigate={setActiveTab}/>}
-        {activeTab==='matches' && <Matches matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} onSaveRound16Prediction={saveRound16Prediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users}/>}
+        {activeTab==='home' && <Home users={users} currentUser={currentUser} matches={matches} onNavigate={handleNavigate}/>}
+        {activeTab==='matches' && <Matches key={matchesPhase} matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} onSaveRound16Prediction={saveRound16Prediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users} initialPhase={matchesPhase}/>}
         {activeTab==='groups'  && <Groups currentUser={currentUser} onSaveGroupPrediction={saveGroupPrediction} users={users} matches={matches} groupsForceOpen={groupsForceOpen}/>}
         {activeTab==='results' && <Results matches={matches} currentUser={currentUser} users={users}/>}
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
