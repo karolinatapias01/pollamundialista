@@ -76,8 +76,8 @@ const ROUND16_TEAMS = [
   'sui','alg','col','gha','aus','egy','por','cro'
 ];
 
-const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Prediction, reactions, onAddReaction, onRemoveReaction, users }) => {
-  const [selectedPhase, setSelectedPhase] = useState('groups');
+const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Prediction, reactions, onAddReaction, onRemoveReaction, users, initialPhase }) => {
+  const [selectedPhase, setSelectedPhase] = useState(initialPhase || 'groups');
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [selectedDate,  setSelectedDate]  = useState(todayCol());
   const [viewMode,      setViewMode]      = useState('date');
