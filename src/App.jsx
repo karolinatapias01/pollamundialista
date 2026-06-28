@@ -286,24 +286,24 @@ function App() {
               ]},
               { title:'🔥 Ronda de 32', items:[
                 { label:'Resultado correcto', pts:'+3 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+9 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+6 pts', color:'#fde047' },
                 { label:'Equipo clasificado adivinado', pts:'+2 pts', color:'#c084fc' },
               ]},
               { title:'💪 Octavos de final', items:[
                 { label:'Resultado correcto', pts:'+4 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+12 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+8 pts', color:'#fde047' },
               ]},
-              { title:'🏅 Cuartos de final', items:[
+              { title:'🏅 Semis y Cuartos', items:[
                 { label:'Resultado correcto', pts:'+5 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+15 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+10 pts', color:'#fde047' },
               ]},
-              { title:'🏆 Semifinales', items:[
+              { title:'🥉 3er puesto', items:[
                 { label:'Resultado correcto', pts:'+6 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+18 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+12 pts', color:'#fde047' },
               ]},
               { title:'🥇 Final', items:[
                 { label:'Resultado correcto', pts:'+7 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+21 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+14 pts', color:'#fde047' },
               ]},
               { title:'📊 Clasificados de grupo', items:[
                 { label:'1° y 2° en orden exacto', pts:'+10 pts', color:'#fde047' },

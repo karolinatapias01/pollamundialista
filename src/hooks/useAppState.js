@@ -5,15 +5,14 @@ import {
 import { db } from '../firebase';
 import { matches as initialMatches } from '../data/matches';
 
-// Puntos por fase
 const getPhasePoints = (phase) => {
   switch(phase) {
     case 'groups':   return { correct: 1, exact: 4 };
-    case 'round16':  return { correct: 3, exact: 9 };
-    case 'quarters': return { correct: 4, exact: 12 };
-    case 'semis':    return { correct: 5, exact: 15 };
-    case 'third':    return { correct: 5, exact: 15 };
-    case 'final':    return { correct: 6, exact: 18 };
+    case 'round16':  return { correct: 3, exact: 6 };
+    case 'quarters': return { correct: 4, exact: 8 };
+    case 'semis':    return { correct: 5, exact: 10 };
+    case 'third':    return { correct: 6, exact: 12 };
+    case 'final':    return { correct: 7, exact: 14 };
     default:         return { correct: 1, exact: 4 };
   }
 };
@@ -142,7 +141,6 @@ const useAppState = () => {
     });
   };
 
-  // Guardar pronóstico de 16 clasificados de la Ronda de 32
   const saveRound16Prediction = async (userId, teamIds) => {
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
@@ -202,7 +200,6 @@ const useAppState = () => {
       }
     });
 
-    // Puntos de grupos
     const groupPreds = user.groupPredictions || {};
     Object.entries(groupPreds).forEach(([group, pred]) => {
       if (!pred?.first || !pred?.second) return;
@@ -223,7 +220,6 @@ const useAppState = () => {
       }
     });
 
-    // Puntos de pronóstico 16 clasificados
     const round16Pred = user.round16Prediction || [];
     const round16Results = user.round16Results || [];
     if (round16Results.length > 0 && round16Pred.length > 0) {
@@ -266,7 +262,6 @@ const useAppState = () => {
     }
   };
 
-  // Guardar los 16 equipos que clasificaron (lo llama el admin)
   const updateRound16Results = async (teamIds) => {
     const usersSnap = await getDocs(collection(db, 'users'));
     const matchesSnap = await getDocs(collection(db, 'matches'));
