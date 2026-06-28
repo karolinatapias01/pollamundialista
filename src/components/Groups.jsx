@@ -57,13 +57,13 @@ const Groups = ({ currentUser, onSaveGroupPrediction, users, matches, groupsForc
 
   const liveMatches = matches || allMatchesData;
 
- const isGroupOpen = (group) => {
-  if (groupsForceOpen) return true;
-  const gMatches = liveMatches.filter(m => m.phase==='groups' && m.group===group);
-  if (!gMatches.length) return false;
-  const firstDate = new Date(Math.min(...gMatches.map(m => new Date(m.date))));
-  return new Date() < firstDate;
-};
+  const isGroupOpen = (group) => {
+    if (groupsForceOpen) return true;
+    const gMatches = liveMatches.filter(m => m.phase==='groups' && m.group===group);
+    if (!gMatches.length) return false;
+    const firstDate = new Date(Math.min(...gMatches.map(m => new Date(m.date))));
+    return new Date() < firstDate;
+  };
 
   const standings = useMemo(() => calcStandings(selectedGroup, liveMatches), [selectedGroup, liveMatches]);
 
@@ -84,6 +84,34 @@ const Groups = ({ currentUser, onSaveGroupPrediction, users, matches, groupsForc
     if (!sel.first || !sel.second) { alert('Selecciona el 1° y 2° clasificado'); return; }
     onSaveGroupPrediction(currentUser.id, selectedGroup, sel.first, sel.second);
     alert(`✓ Pronóstico del Grupo ${selectedGroup} guardado`);
+  };
+
+  // Usuarios aprobados con pronóstico en este grupo
+  const usersWithPred = useMemo(() => {
+    return users
+      .filter(u => u.approved || u.isAdmin)
+      .filter(u => u.groupPredictions?.[selectedGroup])
+      .sort((a,b) => (b.points||0) - (a.points||0));
+  }, [users, selectedGroup]);
+
+  // Resultado real del grupo (del currentUser o cualquier usuario que lo tenga)
+  const groupResult = useMemo(() => {
+    const anyUser = users.find(u => u.groupResults?.[selectedGroup]);
+    return anyUser?.groupResults?.[selectedGroup] || null;
+  }, [users, selectedGroup]);
+
+  const calcGroupPts = (pred, result) => {
+    if (!pred || !result) return null;
+    if (pred.first === result.first && pred.second === result.second) return 10;
+    if (
+      (pred.first === result.first || pred.first === result.second) &&
+      (pred.second === result.first || pred.second === result.second)
+    ) return 5;
+    if (
+      pred.first === result.first || pred.first === result.second ||
+      pred.second === result.first || pred.second === result.second
+    ) return 2;
+    return 0;
   };
 
   const tabBtn = (id, label) => (
@@ -147,8 +175,9 @@ const Groups = ({ currentUser, onSaveGroupPrediction, users, matches, groupsForc
       </div>
 
       <div style={{...card, padding:'6px', marginBottom:'12px', display:'flex', gap:'4px'}}>
-        {tabBtn('standings', '📊 Tabla de posiciones')}
+        {tabBtn('standings', '📊 Tabla')}
         {tabBtn('predict', '🎯 Mi pronóstico')}
+        {tabBtn('all', '👥 Todos')}
       </div>
 
       {activeTab === 'standings' && (
@@ -327,6 +356,97 @@ const Groups = ({ currentUser, onSaveGroupPrediction, users, matches, groupsForc
                 Guardar pronóstico Grupo {selectedGroup}
               </button>
             </>
+          )}
+        </div>
+      )}
+
+      {/* PESTAÑA TODOS */}
+      {activeTab === 'all' && (
+        <div style={{...card, padding:'16px 18px'}}>
+          <div style={{fontSize:'14px',fontWeight:'700',color:'white',marginBottom:'4px'}}>
+            👥 Pronósticos del Grupo {selectedGroup}
+          </div>
+          <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginBottom:'14px'}}>
+            {usersWithPred.length} participante{usersWithPred.length!==1?'s':''} pronosticaron este grupo
+          </div>
+
+          {/* Resultado real si ya existe */}
+          {groupResult && (
+            <div style={{padding:'10px 14px',borderRadius:'10px',background:'rgba(250,204,21,0.08)',border:'1px solid rgba(250,204,21,0.2)',marginBottom:'14px'}}>
+              <div style={{fontSize:'11px',color:'#fde047',fontWeight:'700',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                ✅ Resultado oficial
+              </div>
+              <div style={{display:'flex',gap:'20px'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                  <span style={{fontSize:'11px',color:'#4ade80',fontWeight:'700'}}>1°</span>
+                  <Flag code={getTeamById(groupResult.first)?.flagCode} size={20}/>
+                  <span style={{fontSize:'12px',color:'white'}}>{getTeamById(groupResult.first)?.name}</span>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                  <span style={{fontSize:'11px',color:'#93c5fd',fontWeight:'700'}}>2°</span>
+                  <Flag code={getTeamById(groupResult.second)?.flagCode} size={20}/>
+                  <span style={{fontSize:'12px',color:'white'}}>{getTeamById(groupResult.second)?.name}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {usersWithPred.length === 0 ? (
+            <div style={{textAlign:'center',padding:'24px',color:'rgba(255,255,255,0.3)',fontSize:'13px'}}>
+              Nadie ha pronosticado este grupo aún
+            </div>
+          ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+              {usersWithPred.map(user => {
+                const pred = user.groupPredictions[selectedGroup];
+                const pts = calcGroupPts(pred, groupResult);
+                const isMe = user.id === currentUser.id;
+                const firstTeam = getTeamById(pred.first);
+                const secondTeam = getTeamById(pred.second);
+                const avatarTeam = getTeamById(user.avatar);
+
+                return (
+                  <div key={user.id} style={{padding:'10px 12px',borderRadius:'10px',
+                    background:isMe?'rgba(74,222,128,0.06)':'rgba(255,255,255,0.03)',
+                    border:isMe?'1px solid rgba(74,222,128,0.2)':'1px solid rgba(255,255,255,0.06)'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'8px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                        {avatarTeam?.flagCode
+                          ? <img src={`https://hatscripts.github.io/circle-flags/flags/${avatarTeam.flagCode}.svg`} width={20} height={20} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
+                          : <span style={{fontSize:'16px'}}>{user.avatar||'👤'}</span>
+                        }
+                        <div>
+                          <span style={{fontSize:'13px',fontWeight:'600',color:isMe?'#4ade80':'rgba(255,255,255,0.85)'}}>
+                            {user.name}
+                          </span>
+                          {user.nickname && user.name !== user.nickname && (
+                            <span style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginLeft:'4px'}}>({user.nickname})</span>
+                          )}
+                          {isMe && <span style={{fontSize:'10px',color:'#4ade80',marginLeft:'6px'}}>tú</span>}
+                        </div>
+                      </div>
+                      {pts !== null && (
+                        <span style={{fontSize:'13px',fontWeight:'800',color:pts>0?'#4ade80':'#f87171'}}>
+                          {pts>0?`+${pts} pts`:'✗ 0 pts'}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{display:'flex',gap:'16px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                        <span style={{fontSize:'10px',color:'#4ade80',fontWeight:'700'}}>1°</span>
+                        <Flag code={firstTeam?.flagCode} size={18}/>
+                        <span style={{fontSize:'12px',color:'rgba(255,255,255,0.7)'}}>{firstTeam?.name||'—'}</span>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                        <span style={{fontSize:'10px',color:'#93c5fd',fontWeight:'700'}}>2°</span>
+                        <Flag code={secondTeam?.flagCode} size={18}/>
+                        <span style={{fontSize:'12px',color:'rgba(255,255,255,0.7)'}}>{secondTeam?.name||'—'}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
