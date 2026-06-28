@@ -12,6 +12,13 @@ const Flag = ({ code, size = 24 }) => {
 
 const ALL_GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
+const ROUND16_TEAMS = [
+  'rsa','can','bra','jpn','ger','par','ned','mar',
+  'civ','nor','fra','swe','mex','ecu','eng','cod',
+  'bel','sen','usa','bih','esp','aut','arg','cpv',
+  'sui','alg','col','gha','aus','egy','por','cro'
+];
+
 const getTeamsByGroup = (group) => {
   const gMatches = allMatches.filter(m => m.phase==='groups' && m.group===group);
   const ids = new Set();
@@ -22,7 +29,7 @@ const getTeamsByGroup = (group) => {
 const toColDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 const todayCol = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
@@ -35,6 +42,9 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [championSaved, setChampionSaved] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  const [round16Sel, setRound16Sel] = useState([]);
+  const [round16Saved, setRound16Saved] = useState(false);
+  const [savingR16, setSavingR16] = useState(false);
 
   const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
   const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
@@ -61,8 +71,16 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   };
 
   const formatTime = (ds) => new Date(ds).toLocaleTimeString('es-CO',{timeZone:'America/Bogota',hour:'2-digit',minute:'2-digit',hour12:true});
-  const phaseLabel = (p) => ({groups:'Grupos',round16:'Octavos',quarters:'Cuartos',semis:'Semis',third:'3er Lugar',final:'Final'}[p]||p);
+  const phaseLabel = (p) => ({groups:'Grupos',round16:'Ronda 32',quarters:'Octavos',semis:'Semis',third:'3er Lugar',final:'Final'}[p]||p);
   const inputStyle = { width:'56px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'2px solid rgba(168,85,247,0.4)',color:'white',outline:'none' };
+
+  const toggleR16Team = (teamId) => {
+    setRound16Sel(prev => {
+      if (prev.includes(teamId)) return prev.filter(t => t !== teamId);
+      if (prev.length >= 16) { alert('Ya seleccionaste 16 equipos'); return prev; }
+      return [...prev, teamId];
+    });
+  };
 
   const sectionBtn = (id, label, emoji, badge) => (
     <button onClick={() => setActiveSection(id)}
@@ -135,6 +153,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         {sectionBtn('matches','Partidos','⚽')}
         {sectionBtn('opengroups','Grupos','🔓')}
         {sectionBtn('groups','Clasificados','📊')}
+        {sectionBtn('round16results','16 Clasif.','🔥')}
         {sectionBtn('champion','Campeón','🏆')}
         {sectionBtn('users','Usuarios','👥')}
         {sectionBtn('reset','Resetear','🔄')}
@@ -278,20 +297,18 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
             </div>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
-            <button
-              disabled={loadingGroups}
+            <button disabled={loadingGroups}
               onClick={async()=>{
                 if(!confirm('¿Abrir todos los grupos para pronosticar?')) return;
                 setLoadingGroups(true);
                 await onOpenAllGroups();
                 setLoadingGroups(false);
-                alert('✓ Grupos abiertos por 24 horas. Avísales a todos que pronostiquen.');
+                alert('✓ Grupos abiertos. Avísales a todos que pronostiquen.');
               }}
               style={{width:'100%',padding:'14px',background:loadingGroups?'rgba(255,255,255,0.06)':'rgba(74,222,128,0.15)',border:'1px solid rgba(74,222,128,0.4)',color:'#4ade80',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingGroups?'default':'pointer'}}>
               {loadingGroups?'⏳ Procesando...':'🔓 Abrir todos los grupos'}
             </button>
-            <button
-              disabled={loadingGroups}
+            <button disabled={loadingGroups}
               onClick={async()=>{
                 if(!confirm('¿Cerrar todos los grupos?')) return;
                 setLoadingGroups(true);
@@ -306,7 +323,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         </div>
       )}
 
-      {/* CLASIFICADOS */}
+      {/* CLASIFICADOS DE GRUPOS */}
       {activeSection==='groups' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
@@ -358,6 +375,75 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
             style={{width:'100%',padding:'12px',background:groupFirst&&groupSecond?'linear-gradient(135deg,#7c3aed,#c026d3)':'rgba(255,255,255,0.06)',border:'none',color:groupFirst&&groupSecond?'white':'rgba(255,255,255,0.3)',fontWeight:'600',fontSize:'14px',borderRadius:'10px',cursor:'pointer',marginTop:'8px'}}>
             Guardar clasificados Grupo {selectedGroup}
           </button>
+        </div>
+      )}
+
+      {/* 16 CLASIFICADOS RONDA DE 32 */}
+      {activeSection==='round16results' && (
+        <div style={{...card,padding:'20px'}}>
+          <div style={{marginBottom:'16px'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔥 16 clasificados a Octavos</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>
+              Confirma los 16 equipos que pasaron la Ronda de 32. Esto suma +2 pts a cada usuario que los haya adivinado.
+            </p>
+          </div>
+
+          {round16Saved ? (
+            <div style={{padding:'16px',borderRadius:'12px',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)',textAlign:'center'}}>
+              <div style={{fontSize:'32px',marginBottom:'8px'}}>🔥</div>
+              <div style={{fontSize:'14px',fontWeight:'700',color:'#fbbf24'}}>¡16 clasificados registrados!</div>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'6px'}}>Los puntos ya fueron asignados a todos los usuarios</div>
+            </div>
+          ) : (
+            <>
+              <div style={{padding:'12px',borderRadius:'10px',background:'rgba(251,191,36,0.06)',border:'1px solid rgba(251,191,36,0.15)',marginBottom:'14px'}}>
+                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',lineHeight:'1.6'}}>
+                  ⚠️ <strong style={{color:'white'}}>Solo hazlo una vez</strong> cuando terminen todos los partidos de la Ronda de 32.<br/>
+                  Seleccionados: <span style={{color:round16Sel.length===16?'#4ade80':'#fbbf24',fontWeight:'700'}}>{round16Sel.length}/16</span>
+                </div>
+              </div>
+
+              <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'14px'}}>
+                {ROUND16_TEAMS.map(teamId => {
+                  const team = getTeamById(teamId);
+                  const isSelected = round16Sel.includes(teamId);
+                  return (
+                    <button key={teamId} onClick={()=>toggleR16Team(teamId)}
+                      style={{display:'flex',alignItems:'center',gap:'6px',padding:'7px 12px',borderRadius:'8px',cursor:'pointer',
+                        background:isSelected?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)',
+                        border:isSelected?'1px solid rgba(74,222,128,0.4)':'1px solid rgba(255,255,255,0.08)',
+                        color:isSelected?'#4ade80':'rgba(255,255,255,0.6)'}}>
+                      <Flag code={team?.flagCode} size={20}/>
+                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400'}}>{team?.name||teamId}</span>
+                      {isSelected && <span style={{fontSize:'11px'}}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                disabled={savingR16 || round16Sel.length !== 16}
+                onClick={async()=>{
+                  if(round16Sel.length !== 16){ alert('Selecciona exactamente 16 equipos'); return; }
+                  if(!confirm(`¿Confirmas estos 16 equipos como clasificados a Octavos? Esta acción asigna puntos a todos los usuarios.`)) return;
+                  setSavingR16(true);
+                  try {
+                    await onUpdateRound16Results(round16Sel);
+                    setRound16Saved(true);
+                    alert('✅ ¡Listo! Los puntos fueron asignados a todos.');
+                  } catch(e) {
+                    alert('Error al guardar. Intente de nuevo.');
+                  } finally {
+                    setSavingR16(false);
+                  }
+                }}
+                style={{width:'100%',padding:'14px',borderRadius:'10px',fontWeight:'700',fontSize:'14px',cursor:round16Sel.length===16?'pointer':'default',border:'none',
+                  background:round16Sel.length===16?'linear-gradient(135deg,#d97706,#f59e0b)':'rgba(255,255,255,0.06)',
+                  color:round16Sel.length===16?'white':'rgba(255,255,255,0.3)'}}>
+                {savingR16?'⏳ Asignando puntos...':round16Sel.length===16?'🔥 Confirmar 16 clasificados y asignar puntos':'Selecciona 16 equipos'}
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -427,13 +513,13 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               ✓ Puntos → 0<br/>
               ✓ Pronósticos de partidos → borrados<br/>
               ✓ Pronósticos de grupos → borrados<br/>
+              ✓ Pronóstico 16 clasificados → borrado<br/>
               ✓ Resultados de partidos → pendientes<br/>
               ✗ Usuarios → se mantienen<br/>
               ✗ Campeón pronosticado → se mantiene
             </div>
           </div>
-          <button
-            disabled={resetting}
+          <button disabled={resetting}
             onClick={async()=>{
               if(!confirm('¿Seguro? Esto borra todos los puntos y pronósticos.')) return;
               if(!confirm('¿Está completamente seguro? Esta acción NO se puede deshacer.')) return;
@@ -455,6 +541,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
             <li>• Aprueba solo usuarios que hayan pagado $15.000</li>
             <li>• Los pendientes no pueden pronosticar</li>
             <li>• El número rojo en ⏳ indica cuántos esperan aprobación</li>
+            <li>• Confirma los 16 clasificados solo cuando terminen todos los partidos de la Ronda de 32</li>
           </ul>
         </div>
       </div>

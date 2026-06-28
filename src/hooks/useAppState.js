@@ -5,12 +5,25 @@ import {
 import { db } from '../firebase';
 import { matches as initialMatches } from '../data/matches';
 
+// Puntos por fase
+const getPhasePoints = (phase) => {
+  switch(phase) {
+    case 'groups':   return { correct: 1, exact: 4 };
+    case 'round16':  return { correct: 3, exact: 9 };
+    case 'quarters': return { correct: 4, exact: 12 };
+    case 'semis':    return { correct: 5, exact: 15 };
+    case 'third':    return { correct: 5, exact: 15 };
+    case 'final':    return { correct: 6, exact: 18 };
+    default:         return { correct: 1, exact: 4 };
+  }
+};
+
 const useAppState = () => {
-  const [users,       setUsers]           = useState([]);
-  const [currentUser, setCurrentUserState] = useState(null);
-  const [matches,   setMatches]   = useState(initialMatches);
-  const [reactions, setReactions] = useState({});
-  const [loading,   setLoading]   = useState(true);
+  const [users,           setUsers]           = useState([]);
+  const [currentUser,     setCurrentUserState] = useState(null);
+  const [matches,         setMatches]         = useState(initialMatches);
+  const [reactions,       setReactions]       = useState({});
+  const [loading,         setLoading]         = useState(true);
   const [groupsForceOpen, setGroupsForceOpen] = useState(false);
 
   useEffect(() => {
@@ -43,7 +56,6 @@ const useAppState = () => {
     return unsub;
   }, []);
 
-  // ✅ CORREGIDO: ya no sobreescribe partidos si snap viene vacío
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'matches'), (snap) => {
       if (!snap.empty) {
@@ -80,6 +92,7 @@ const useAppState = () => {
       points: 0,
       predictions: {},
       groupPredictions: {},
+      round16Prediction: [],
       approved: users.length === 0,
       stats: {
         correctPredictions: 0,
@@ -129,6 +142,16 @@ const useAppState = () => {
     });
   };
 
+  // Guardar pronóstico de 16 clasificados de la Ronda de 32
+  const saveRound16Prediction = async (userId, teamIds) => {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return;
+    const user = userSnap.data();
+    if (!user.approved && !user.isAdmin) throw new Error('Usuario no aprobado');
+    await updateDoc(userRef, { round16Prediction: teamIds });
+  };
+
   const saveGroupPrediction = async (userId, group, first, second) => {
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
@@ -154,6 +177,7 @@ const useAppState = () => {
       const prediction = user.predictions?.[match.id];
       if (!prediction) return;
 
+      const pts = getPhasePoints(match.phase);
       const actualResult = match.homeScore > match.awayScore ? 'home'
         : match.homeScore < match.awayScore ? 'away' : 'draw';
       const hasBothScores = prediction.homeScore !== undefined && prediction.awayScore !== undefined;
@@ -168,16 +192,17 @@ const useAppState = () => {
       if (predictedResult === null) {
         incorrectPredictions++; currentStreak = 0;
       } else if (isExact) {
-        totalPoints += 4; exactScores++; correctPredictions++;
+        totalPoints += pts.exact; exactScores++; correctPredictions++;
         currentStreak++; maxStreak = Math.max(maxStreak, currentStreak);
       } else if (predictedResult === actualResult) {
-        totalPoints += 1; correctPredictions++;
+        totalPoints += pts.correct; correctPredictions++;
         currentStreak++; maxStreak = Math.max(maxStreak, currentStreak);
       } else {
         incorrectPredictions++; currentStreak = 0;
       }
     });
 
+    // Puntos de grupos
     const groupPreds = user.groupPredictions || {};
     Object.entries(groupPreds).forEach(([group, pred]) => {
       if (!pred?.first || !pred?.second) return;
@@ -197,6 +222,15 @@ const useAppState = () => {
         totalPoints += 2;
       }
     });
+
+    // Puntos de pronóstico 16 clasificados
+    const round16Pred = user.round16Prediction || [];
+    const round16Results = user.round16Results || [];
+    if (round16Results.length > 0 && round16Pred.length > 0) {
+      round16Results.forEach(teamId => {
+        if (round16Pred.includes(teamId)) totalPoints += 2;
+      });
+    }
 
     if (user.championCorrect) totalPoints += 15;
 
@@ -219,13 +253,12 @@ const useAppState = () => {
     await updateDoc(doc(db, 'matches', String(matchId)), {
       homeScore, awayScore, status: 'finished'
     });
-    const updatedMatches = matches.map(m =>
-      m.id === matchId ? { ...m, homeScore, awayScore, status: 'finished' } : m
-    );
+    const matchesSnap = await getDocs(collection(db, 'matches'));
+    const freshMatches = matchesSnap.docs.map(d => ({ ...d.data(), id: parseInt(d.id) }));
     const usersSnap = await getDocs(collection(db, 'users'));
     for (const userDoc of usersSnap.docs) {
       const user = userDoc.data();
-      const updated = recalculateUserPoints(user, updatedMatches);
+      const updated = recalculateUserPoints(user, freshMatches);
       await updateDoc(doc(db, 'users', userDoc.id), {
         points: updated.points,
         stats: updated.stats
@@ -233,7 +266,25 @@ const useAppState = () => {
     }
   };
 
+  // Guardar los 16 equipos que clasificaron (lo llama el admin)
+  const updateRound16Results = async (teamIds) => {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    const matchesSnap = await getDocs(collection(db, 'matches'));
+    const freshMatches = matchesSnap.docs.map(d => ({ ...d.data(), id: parseInt(d.id) }));
+    for (const userDoc of usersSnap.docs) {
+      const user = { ...userDoc.data(), round16Results: teamIds };
+      const updated = recalculateUserPoints(user, freshMatches);
+      await updateDoc(doc(db, 'users', userDoc.id), {
+        round16Results: teamIds,
+        points: updated.points,
+        stats: updated.stats
+      });
+    }
+  };
+
   const updateGroupResult = async (group, first, second) => {
+    const matchesSnap = await getDocs(collection(db, 'matches'));
+    const freshMatches = matchesSnap.docs.map(d => ({ ...d.data(), id: parseInt(d.id) }));
     const usersSnap = await getDocs(collection(db, 'users'));
     for (const userDoc of usersSnap.docs) {
       const user = userDoc.data();
@@ -241,7 +292,7 @@ const useAppState = () => {
         ...user,
         groupResults: { ...(user.groupResults||{}), [group]: { first, second } }
       };
-      const recalculated = recalculateUserPoints(updatedUser, matches);
+      const recalculated = recalculateUserPoints(updatedUser, freshMatches);
       await updateDoc(doc(db, 'users', userDoc.id), {
         groupResults: updatedUser.groupResults,
         points: recalculated.points,
@@ -274,6 +325,8 @@ const useAppState = () => {
         points: 0,
         predictions: {},
         groupPredictions: {},
+        round16Prediction: [],
+        round16Results: [],
         championCorrect: false,
         groupResults: {},
         stats: {
@@ -323,7 +376,8 @@ const useAppState = () => {
   return {
     users, currentUser, matches, reactions, loading,
     setCurrentUser, registerUser, makePrediction,
-    saveGroupPrediction, updateMatchResult,
+    saveGroupPrediction, saveRound16Prediction,
+    updateMatchResult, updateRound16Results,
     updateGroupResult, updateChampion,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
