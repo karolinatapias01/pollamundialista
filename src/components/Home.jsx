@@ -41,6 +41,9 @@ const ALL_GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 const Home = ({ users, currentUser, matches, onNavigate }) => {
   const [showGroupsDetail, setShowGroupsDetail] = useState(false);
 
+  // Leer siempre desde el array users (actualizado en tiempo real) en vez de currentUser
+  const liveUser = users.find(u => u.id === currentUser.id) || currentUser;
+
   const sortedUsers = [...users].sort((a,b) => (b.points||0) - (a.points||0));
   const myPosition = sortedUsers.findIndex(u => u.id === currentUser.id) + 1;
 
@@ -77,7 +80,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
 
   const pendingToday = todayMatches.filter(m => {
     const canPredict = new Date() < new Date(new Date(m.date).getTime() - 10*60*1000);
-    return canPredict && !currentUser.predictions?.[m.id] && m.status !== 'finished';
+    return canPredict && !liveUser.predictions?.[m.id] && m.status !== 'finished';
   });
 
   const pendingGroups = useMemo(() => {
@@ -87,22 +90,21 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
         .sort((a,b) => new Date(a.date)-new Date(b.date))[0];
       if (!firstMatch) return false;
       const isOpen = new Date() < new Date(firstMatch.date);
-      const hasPred = currentUser.groupPredictions?.[g];
+      const hasPred = liveUser.groupPredictions?.[g];
       return isOpen && !hasPred;
     });
-  }, [matches, currentUser]);
+  }, [matches, liveUser]);
 
-  // Grupos que ya tienen resultado asignado (groupResults en cualquier usuario)
+  // Grupos que ya tienen resultado asignado — leer de liveUser
   const groupsWithResults = useMemo(() => {
-    // Tomamos los groupResults del currentUser (se guardan en cada usuario)
-    const results = currentUser.groupResults || {};
+    const results = liveUser.groupResults || {};
     return ALL_GROUPS.filter(g => results[g]?.first && results[g]?.second);
-  }, [currentUser]);
+  }, [liveUser]);
 
-  // Calcular puntos de grupos del usuario actual
+  // Puntos de grupos del usuario
   const myGroupPoints = useMemo(() => {
-    const results = currentUser.groupResults || {};
-    const preds = currentUser.groupPredictions || {};
+    const results = liveUser.groupResults || {};
+    const preds = liveUser.groupPredictions || {};
     let total = 0;
     groupsWithResults.forEach(g => {
       const pred = preds[g];
@@ -119,9 +121,9 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
       ) total += 2;
     });
     return total;
-  }, [currentUser, groupsWithResults]);
+  }, [liveUser, groupsWithResults]);
 
-  const s = (key) => currentUser?.stats?.[key] ?? 0;
+  const s = (key) => liveUser?.stats?.[key] ?? 0;
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
@@ -130,10 +132,10 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
       <div style={{...card, padding:'20px 22px', position:'relative', overflow:'hidden'}}>
         <div style={{position:'absolute',top:0,left:0,right:0,height:'3px',background:'linear-gradient(90deg,#16a34a,#4ade80)'}}/>
         <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px'}}>
-          <div style={{fontSize:'36px'}}>{currentUser.avatar?.length<=2?currentUser.avatar:'👤'}</div>
+          <div style={{fontSize:'36px'}}>{liveUser.avatar?.length<=2?liveUser.avatar:'👤'}</div>
           <div>
             <div style={{fontSize:'18px',fontWeight:'800',color:'white'}}>
-              ¡Hola, {currentUser.nickname||currentUser.name}!
+              ¡Hola, {liveUser.nickname||liveUser.name}!
             </div>
             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.45)',marginTop:'2px'}}>
               Mundial 2026 · {matches.filter(m=>m.status==='finished').length} partidos jugados
@@ -143,9 +145,9 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'8px'}}>
           {[
             {label:'Posición', val:myPosition>0?`#${myPosition}`:'-', color:'#fbbf24', icon:'🏅'},
-            {label:'Puntos',   val:currentUser.points||0,             color:'#4ade80', icon:'⭐'},
-            {label:'Aciertos', val:s('correctPredictions'),           color:'#60a5fa', icon:'✓'},
-            {label:'Exactos',  val:s('exactScores'),                  color:'#fde047', icon:'🎯'},
+            {label:'Puntos',   val:liveUser.points||0,                 color:'#4ade80', icon:'⭐'},
+            {label:'Aciertos', val:s('correctPredictions'),            color:'#60a5fa', icon:'✓'},
+            {label:'Exactos',  val:s('exactScores'),                   color:'#fde047', icon:'🎯'},
           ].map(stat=>(
             <div key={stat.label} style={{background:'rgba(255,255,255,0.05)',borderRadius:'12px',padding:'12px 8px',textAlign:'center'}}>
               <div style={{fontSize:'8px',marginBottom:'4px'}}>{stat.icon}</div>
@@ -180,8 +182,8 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
           {showGroupsDetail && (
             <div style={{borderTop:'1px solid rgba(74,222,128,0.15)',padding:'12px 16px',display:'flex',flexDirection:'column',gap:'8px'}}>
               {groupsWithResults.map(g => {
-                const results = currentUser.groupResults || {};
-                const preds = currentUser.groupPredictions || {};
+                const results = liveUser.groupResults || {};
+                const preds = liveUser.groupPredictions || {};
                 const result = results[g];
                 const pred = preds[g];
                 const first = getTeamById(result?.first);
@@ -214,11 +216,10 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
                       <span style={{fontSize:'12px',fontWeight:'700',color:'rgba(255,255,255,0.6)'}}>Grupo {g}</span>
                       <span style={{fontSize:'13px',fontWeight:'800',color:pts>0?'#4ade80':'#f87171'}}>
-                        {pts>0?`+${pts} pts`:label||'Sin pronóstico'}
+                        {pts>0?`+${pts} pts`:pred?label:'Sin pronóstico'}
                       </span>
                     </div>
                     <div style={{display:'flex',gap:'12px'}}>
-                      {/* Resultado real */}
                       <div style={{flex:1}}>
                         <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Resultado</div>
                         <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
@@ -232,7 +233,6 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
                           </div>
                         </div>
                       </div>
-                      {/* Mi pronóstico */}
                       <div style={{flex:1}}>
                         <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Tu pronóstico</div>
                         {pred ? (
@@ -335,7 +335,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
               <Clock size={12} style={{display:'inline',marginRight:'4px'}}/>
               {formatDate(nextMatch.date)} · {formatTime(nextMatch.date)}
             </div>
-            {!currentUser.predictions?.[nextMatch.id] && (
+            {!liveUser.predictions?.[nextMatch.id] && (
               <button onClick={()=>onNavigate('matches')}
                 style={{padding:'6px 12px',borderRadius:'8px',background:'linear-gradient(135deg,#16a34a,#15803d)',border:'none',color:'white',fontSize:'12px',fontWeight:'600',cursor:'pointer'}}>
                 Pronosticar
@@ -354,7 +354,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
           <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
             {todayMatches.map(m=>{
               const h=getTeamById(m.homeTeam); const a=getTeamById(m.awayTeam);
-              const hasPred = currentUser.predictions?.[m.id];
+              const hasPred = liveUser.predictions?.[m.id];
               const isFinished = m.status==='finished';
               return(
                 <div key={m.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',borderRadius:'10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
@@ -439,9 +439,9 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
             {myPosition > 5 && (
               <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'8px 10px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)'}}>
                 <span style={{fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.4)',width:'22px',textAlign:'center'}}>{myPosition}</span>
-                <span style={{fontSize:'20px'}}>{currentUser.avatar?.length<=2?currentUser.avatar:'👤'}</span>
-                <span style={{fontSize:'13px',fontWeight:'500',color:'#4ade80',flex:1}}>{currentUser.name}{currentUser.nickname?` "${currentUser.nickname}"`:''} <span style={{fontSize:'10px'}}>tú</span></span>
-                <span style={{fontSize:'16px',fontWeight:'800',color:'#4ade80'}}>{currentUser.points||0}</span>
+                <span style={{fontSize:'20px'}}>{liveUser.avatar?.length<=2?liveUser.avatar:'👤'}</span>
+                <span style={{fontSize:'13px',fontWeight:'500',color:'#4ade80',flex:1}}>{liveUser.name}{liveUser.nickname?` "${liveUser.nickname}"`:''} <span style={{fontSize:'10px'}}>tú</span></span>
+                <span style={{fontSize:'16px',fontWeight:'800',color:'#4ade80'}}>{liveUser.points||0}</span>
               </div>
             )}
           </div>
