@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTeamById } from '../data/teams';
 
@@ -68,7 +68,6 @@ const calcPredResult = (pred, match) => {
   return { correct, exact, predResult, actualResult };
 };
 
-// Los 32 equipos de la Ronda de 32
 const ROUND16_TEAMS = [
   'rsa','can','bra','jpn','ger','par','ned','mar',
   'civ','nor','fra','swe','mex','ecu','eng','cod',
@@ -87,6 +86,11 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
   const [round16Sel,    setRound16Sel]    = useState([]);
   const [savingR16,     setSavingR16]     = useState(false);
 
+  // ✅ Actualizar fase cuando cambia initialPhase
+  useEffect(() => {
+    if (initialPhase) setSelectedPhase(initialPhase);
+  }, [initialPhase]);
+
   const phases = [
     { id:'groups',   label:'⚽ Grupos'  },
     { id:'round16',  label:'🔥 R. de 32' },
@@ -96,7 +100,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
   ];
   const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
-  // Primer partido de la Ronda de 32
   const firstRound16Match = useMemo(() => {
     return matches
       .filter(m => m.phase === 'round16' && m.homeTeam && m.awayTeam)
@@ -231,7 +234,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
         </div>
       </div>
 
-      {/* SECCIÓN PRONÓSTICO 16 CLASIFICADOS — solo en Ronda de 32 */}
       {selectedPhase==='round16' && (
         <div style={{...card,padding:'16px 18px',marginBottom:'12px',borderColor:'rgba(251,191,36,0.2)',background:'rgba(251,191,36,0.04)'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
@@ -256,7 +258,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
           </div>
 
           {hasRound16Pred && round16Sel.length === 0 ? (
-            // Ya tiene pronóstico guardado
             <div>
               <div style={{padding:'10px 12px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',marginBottom:'10px'}}>
                 <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'8px'}}>✓ Tus 16 equipos seleccionados:</div>
@@ -287,7 +288,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
               )}
             </div>
           ) : round16IsOpen && isApproved ? (
-            // Formulario para seleccionar
             <div>
               <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'10px'}}>
                 Seleccionados: <span style={{color:round16Sel.length===16?'#4ade80':'#fbbf24',fontWeight:'700'}}>{round16Sel.length}/16</span>
