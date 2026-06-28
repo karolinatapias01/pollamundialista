@@ -232,7 +232,7 @@ const useAppState = () => {
       });
     }
 
-    if (user.championCorrect) totalPoints += 15;
+    if (user.championCorrect) totalPoints += 30;
 
     return {
       ...user,
@@ -307,7 +307,7 @@ const useAppState = () => {
       const user = userDoc.data();
       if (user.championPrediction === championId) {
         await updateDoc(doc(db, 'users', userDoc.id), {
-          points: (user.points || 0) + 15,
+          points: (user.points || 0) + 30,
           championCorrect: true
         });
       }

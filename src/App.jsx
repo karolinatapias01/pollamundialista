@@ -305,7 +305,7 @@ function App() {
                 { label:'Un equipo correcto', pts:'+2 pts', color:'#93c5fd' },
               ]},
               { title:'🏆 Campeón del Mundial', items:[
-                { label:'Adivinas el campeón', pts:'+15 pts', color:'#c084fc' },
+                { label:'Adivinas el campeón', pts:'+30 pts', color:'#c084fc' },
               ]},
             ].map(section=>(
               <div key={section.title} style={{ marginBottom:'20px' }}>
