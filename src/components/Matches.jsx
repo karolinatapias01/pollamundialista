@@ -76,7 +76,15 @@ const ROUND16_TEAMS = [
 ];
 
 const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Prediction, reactions, onAddReaction, onRemoveReaction, users, initialPhase }) => {
-  const [selectedPhase, setSelectedPhase] = useState(initialPhase || 'groups');
+ const [selectedPhase, setSelectedPhase] = useState(() => {
+  if (initialPhase && initialPhase !== 'groups') return initialPhase;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const todayPhases = matches
+    .filter(m => m.homeTeam && m.awayTeam && m.status !== 'finished')
+    .filter(m => new Date(m.date).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }) === today);
+  if (todayPhases.length > 0) return todayPhases[0].phase;
+  return initialPhase || 'groups';
+});
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [selectedDate,  setSelectedDate]  = useState(todayCol());
   const [viewMode,      setViewMode]      = useState('date');
