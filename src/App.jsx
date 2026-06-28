@@ -87,13 +87,19 @@ function App() {
     openAllGroups, closeAllGroups, groupsForceOpen
   } = useAppState();
 
-  const [activeTab, setActiveTab] = useState('home');
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeTab,    setActiveTab]    = useState('home');
+  const [matchesPhase, setMatchesPhase] = useState('groups');
+  const [menuOpen,     setMenuOpen]     = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('polla_tutorial_done');
   });
   const [trialExpired, setTrialExpired] = useState(false);
-  const [showRules, setShowRules] = useState(false);
+  const [showRules,    setShowRules]    = useState(false);
+
+  const handleNavigate = (tab, phase) => {
+    setActiveTab(tab);
+    if (phase) setMatchesPhase(phase);
+  };
 
   const handleFinishTutorial = () => {
     localStorage.setItem('polla_tutorial_done', 'true');
@@ -251,7 +257,7 @@ function App() {
       </header>
 
       <main style={{ maxWidth:'900px', margin:'0 auto', padding:'16px 16px 100px' }}>
-        {activeTab==='home' && <Home users={users} currentUser={currentUser} matches={matches} onNavigate={handleNavigate}/>}
+        {activeTab==='home'    && <Home users={users} currentUser={currentUser} matches={matches} onNavigate={handleNavigate}/>}
         {activeTab==='matches' && <Matches key={matchesPhase} matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} onSaveRound16Prediction={saveRound16Prediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users} initialPhase={matchesPhase}/>}
         {activeTab==='groups'  && <Groups currentUser={currentUser} onSaveGroupPrediction={saveGroupPrediction} users={users} matches={matches} groupsForceOpen={groupsForceOpen}/>}
         {activeTab==='results' && <Results matches={matches} currentUser={currentUser} users={users}/>}
