@@ -281,40 +281,40 @@ function App() {
             <div style={{ width:'40px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.2)', margin:'0 auto 20px' }}/>
             <h2 style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'20px', textAlign:'center' }}>📋 Reglas y Puntos</h2>
             {[
-              { title:'⚽ Grupos (cerrado)', items:[
-                { label:'Resultado correcto', pts:'+1 pt', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+4 pts', color:'#fde047' },
-              ]},
-              { title:'🔥 Ronda de 32', items:[
-                { label:'Resultado correcto', pts:'+3 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+9 pts', color:'#fde047' },
-                { label:'Equipo clasificado adivinado', pts:'+2 pts', color:'#c084fc' },
-              ]},
-              { title:'💪 Octavos de final', items:[
-                { label:'Resultado correcto', pts:'+4 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+12 pts', color:'#fde047' },
-              ]},
-              { title:'🏅 Semis y Cuartos', items:[
-                { label:'Resultado correcto', pts:'+5 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+15 pts', color:'#fde047' },
-              ]},
-              { title:'🥉 3er puesto', items:[
-                { label:'Resultado correcto', pts:'+6 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+18 pts', color:'#fde047' },
-              ]},
-              { title:'🥇 Final', items:[
-                { label:'Resultado correcto', pts:'+7 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+21 pts', color:'#fde047' },
-              ]},
-              { title:'📊 Clasificados de grupo', items:[
-                { label:'1° y 2° en orden exacto', pts:'+10 pts', color:'#fde047' },
-                { label:'Ambos equipos sin importar orden', pts:'+5 pts', color:'#4ade80' },
-                { label:'Un equipo correcto', pts:'+2 pts', color:'#93c5fd' },
-              ]},
-              { title:'🏆 Campeón del Mundial', items:[
-                { label:'Adivinas el campeón', pts:'+30 pts', color:'#c084fc' },
-              ]},
-            ].map(section=>(
+  { title:'⚽ Grupos (cerrado)', items:[
+    { label:'Resultado correcto', pts:'+1 pt', color:'#4ade80' },
+    { label:'Marcador exacto (+3 extra)', pts:'+4 pts total', color:'#fde047' },
+  ]},
+  { title:'🔥 Ronda de 32', items:[
+    { label:'Resultado correcto', pts:'+3 pts', color:'#4ade80' },
+    { label:'Marcador exacto (+6 extra)', pts:'+9 pts total', color:'#fde047' },
+    { label:'Equipo clasificado adivinado', pts:'+2 pts', color:'#c084fc' },
+  ]},
+  { title:'💪 Octavos de final', items:[
+    { label:'Resultado correcto', pts:'+4 pts', color:'#4ade80' },
+    { label:'Marcador exacto (+8 extra)', pts:'+12 pts total', color:'#fde047' },
+  ]},
+  { title:'🏅 Semis y Cuartos', items:[
+    { label:'Resultado correcto', pts:'+5 pts', color:'#4ade80' },
+    { label:'Marcador exacto (+10 extra)', pts:'+15 pts total', color:'#fde047' },
+  ]},
+  { title:'🥉 3er puesto', items:[
+    { label:'Resultado correcto', pts:'+6 pts', color:'#4ade80' },
+    { label:'Marcador exacto (+12 extra)', pts:'+18 pts total', color:'#fde047' },
+  ]},
+  { title:'🥇 Final', items:[
+    { label:'Resultado correcto', pts:'+7 pts', color:'#4ade80' },
+    { label:'Marcador exacto (+14 extra)', pts:'+21 pts total', color:'#fde047' },
+  ]},
+  { title:'📊 Clasificados de grupo', items:[
+    { label:'1° y 2° en orden exacto', pts:'+10 pts', color:'#fde047' },
+    { label:'Ambos equipos sin importar orden', pts:'+5 pts', color:'#4ade80' },
+    { label:'Un equipo correcto', pts:'+2 pts', color:'#93c5fd' },
+  ]},
+  { title:'🏆 Campeón del Mundial', items:[
+    { label:'Adivinas el campeón', pts:'+30 pts', color:'#c084fc' },
+  ]},
+].map(section=>(
               <div key={section.title} style={{ marginBottom:'20px' }}>
                 <div style={{ fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.7)', marginBottom:'10px' }}>{section.title}</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
