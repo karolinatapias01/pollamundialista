@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTeamById } from '../data/teams';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const REACTION_EMOJIS = ['😂','🔥','💀','🤯','😭','🎉','👏','💪','🙌','😱','🤦','👑'];
 
@@ -76,15 +78,15 @@ const ROUND16_TEAMS = [
 ];
 
 const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Prediction, reactions, onAddReaction, onRemoveReaction, users, initialPhase }) => {
- const [selectedPhase, setSelectedPhase] = useState(() => {
-  if (initialPhase && initialPhase !== 'groups') return initialPhase;
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
-  const todayPhases = matches
-    .filter(m => m.homeTeam && m.awayTeam && m.status !== 'finished')
-    .filter(m => new Date(m.date).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }) === today);
-  if (todayPhases.length > 0) return todayPhases[0].phase;
-  return initialPhase || 'groups';
-});
+  const [selectedPhase, setSelectedPhase] = useState(() => {
+    if (initialPhase && initialPhase !== 'groups') return initialPhase;
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    const todayPhases = matches
+      .filter(m => m.homeTeam && m.awayTeam && m.status !== 'finished')
+      .filter(m => new Date(m.date).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }) === today);
+    if (todayPhases.length > 0) return todayPhases[0].phase;
+    return initialPhase || 'groups';
+  });
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [selectedDate,  setSelectedDate]  = useState(todayCol());
   const [viewMode,      setViewMode]      = useState('date');
@@ -93,11 +95,20 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
   const [saving,        setSaving]        = useState({});
   const [round16Sel,    setRound16Sel]    = useState([]);
   const [savingR16,     setSavingR16]     = useState(false);
+  const [round16ForceOpen, setRound16ForceOpen] = useState(false);
 
-  // ✅ Actualizar fase cuando cambia initialPhase
   useEffect(() => {
     if (initialPhase) setSelectedPhase(initialPhase);
   }, [initialPhase]);
+
+  // ✅ Leer si el admin abrió manualmente el pronóstico de 16 clasificados
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'round16'), (snap) => {
+      if (snap.exists()) setRound16ForceOpen(snap.data().forceOpen || false);
+      else setRound16ForceOpen(false);
+    });
+    return unsub;
+  }, []);
 
   const phases = [
     { id:'groups',   label:'⚽ Grupos'  },
@@ -114,16 +125,30 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
       .sort((a,b) => new Date(a.date) - new Date(b.date))[0];
   }, [matches]);
 
+  // ✅ Equipos bloqueados: los que ya tienen partido finalizado en R32
+  const blockedTeams = useMemo(() => {
+    const blocked = new Set();
+    matches
+      .filter(m => m.phase === 'round16' && m.status === 'finished')
+      .forEach(m => {
+        if (m.homeTeam) blocked.add(m.homeTeam);
+        if (m.awayTeam) blocked.add(m.awayTeam);
+      });
+    return blocked;
+  }, [matches]);
+
   const round16IsOpen = useMemo(() => {
+    if (round16ForceOpen) return true;
     if (!firstRound16Match) return false;
     return new Date() < new Date(firstRound16Match.date);
-  }, [firstRound16Match]);
+  }, [firstRound16Match, round16ForceOpen]);
 
   const myRound16Pred = currentUser.round16Prediction || [];
   const round16Results = currentUser.round16Results || [];
   const hasRound16Pred = myRound16Pred.length > 0;
 
   const toggleRound16Team = (teamId) => {
+    if (blockedTeams.has(teamId)) return;
     setRound16Sel(prev => {
       if (prev.includes(teamId)) return prev.filter(t => t !== teamId);
       if (prev.length >= 16) { alert('Ya seleccionaste 16 equipos'); return prev; }
@@ -297,22 +322,34 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
             </div>
           ) : round16IsOpen && isApproved ? (
             <div>
-              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'10px'}}>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'6px'}}>
                 Seleccionados: <span style={{color:round16Sel.length===16?'#4ade80':'#fbbf24',fontWeight:'700'}}>{round16Sel.length}/16</span>
               </div>
+              {blockedTeams.size > 0 && (
+                <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginBottom:'10px'}}>
+                  🔒 Los equipos en gris ya jugaron — no se pueden seleccionar
+                </div>
+              )}
               <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'12px'}}>
                 {ROUND16_TEAMS.map(teamId => {
                   const team = getTeamById(teamId);
                   const isSelected = round16Sel.includes(teamId);
+                  const isBlocked = blockedTeams.has(teamId);
                   return (
                     <button key={teamId} onClick={()=>toggleRound16Team(teamId)}
-                      style={{display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',borderRadius:'8px',cursor:'pointer',
-                        background:isSelected?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)',
-                        border:isSelected?'1px solid rgba(74,222,128,0.4)':'1px solid rgba(255,255,255,0.08)',
-                        color:isSelected?'#4ade80':'rgba(255,255,255,0.6)'}}>
+                      disabled={isBlocked}
+                      style={{display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',borderRadius:'8px',
+                        cursor:isBlocked?'not-allowed':'pointer',
+                        opacity:isBlocked?0.35:1,
+                        background:isBlocked?'rgba(255,255,255,0.02)':isSelected?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)',
+                        border:isBlocked?'1px solid rgba(255,255,255,0.05)':isSelected?'1px solid rgba(74,222,128,0.4)':'1px solid rgba(255,255,255,0.08)',
+                        color:isBlocked?'rgba(255,255,255,0.3)':isSelected?'#4ade80':'rgba(255,255,255,0.6)'}}>
                       <Flag code={team?.flagCode} size={18}/>
-                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400'}}>{team?.name||teamId}</span>
-                      {isSelected && <span style={{fontSize:'10px'}}>✓</span>}
+                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400',textDecoration:isBlocked?'line-through':'none'}}>
+                        {team?.name||teamId}
+                      </span>
+                      {isSelected && !isBlocked && <span style={{fontSize:'10px'}}>✓</span>}
+                      {isBlocked && <span style={{fontSize:'10px'}}>🔒</span>}
                     </button>
                   );
                 })}

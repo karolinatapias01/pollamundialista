@@ -309,7 +309,6 @@ const useAppState = () => {
     }
   };
 
-  // ✅ NUEVO: Recalcular todos los puntos de todos los usuarios
   const recalculateAllPoints = async () => {
     const matchesSnap = await getDocs(collection(db, 'matches'));
     const freshMatches = matchesSnap.docs.map(d => ({ ...d.data(), id: parseInt(d.id) }));
@@ -322,6 +321,14 @@ const useAppState = () => {
         stats: updated.stats
       });
     }
+  };
+
+  const openRound16Predictions = async () => {
+    await setDoc(doc(db, 'settings', 'round16'), { forceOpen: true });
+  };
+
+  const closeRound16Predictions = async () => {
+    await setDoc(doc(db, 'settings', 'round16'), { forceOpen: false });
   };
 
   const deleteUser = async (userId) => {
@@ -390,6 +397,7 @@ const useAppState = () => {
     updateMatchResult, updateRound16Results,
     updateGroupResult, updateChampion,
     recalculateAllPoints,
+    openRound16Predictions, closeRound16Predictions,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
     openAllGroups, closeAllGroups, groupsForceOpen

@@ -79,7 +79,7 @@ const calcUserPoints = (user, matches) => {
   return { matchPts, groupPts, round16Pts, championPts, total: matchPts + groupPts + round16Pts + championPts };
 };
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onRecalculateAll, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onRecalculateAll, onOpenRound16, onCloseRound16, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
@@ -92,6 +92,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [championSaved, setChampionSaved] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  const [loadingRound16, setLoadingRound16] = useState(false);
   const [round16Sel, setRound16Sel] = useState([]);
   const [round16Saved, setRound16Saved] = useState(false);
   const [savingR16, setSavingR16] = useState(false);
@@ -336,7 +337,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         </>
       )}
 
-      {/* ABRIR/CERRAR GRUPOS */}
+      {/* ABRIR/CERRAR GRUPOS Y R32 */}
       {activeSection==='opengroups' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
@@ -345,11 +346,11 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
           </div>
           <div style={{padding:'14px',borderRadius:'12px',background:'rgba(74,222,128,0.06)',border:'1px solid rgba(74,222,128,0.15)',marginBottom:'16px'}}>
             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.5)',lineHeight:'1.6'}}>
-              🔓 <strong style={{color:'white'}}>Abrir:</strong> Todos pueden pronosticar grupos por 24 horas<br/>
+              🔓 <strong style={{color:'white'}}>Abrir:</strong> Todos pueden pronosticar grupos<br/>
               🔒 <strong style={{color:'white'}}>Cerrar:</strong> Se bloquean los pronósticos de grupos
             </div>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'10px',marginBottom:'24px'}}>
             <button disabled={loadingGroups}
               onClick={async()=>{
                 if(!confirm('¿Abrir todos los grupos para pronosticar?')) return;
@@ -372,6 +373,38 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               style={{width:'100%',padding:'14px',background:loadingGroups?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingGroups?'default':'pointer'}}>
               {loadingGroups?'⏳ Procesando...':'🔒 Cerrar todos los grupos'}
             </button>
+          </div>
+
+          {/* R32 */}
+          <div style={{paddingTop:'16px',borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'#fbbf24',marginBottom:'4px'}}>🔥 Pronóstico 16 clasificados R32</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginBottom:'14px'}}>
+              Abre para que los que no alcanzaron puedan pronosticar. Los equipos que ya jugaron aparecerán bloqueados.
+            </p>
+            <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+              <button disabled={loadingRound16}
+                onClick={async()=>{
+                  if(!confirm('¿Abrir pronóstico de 16 clasificados?')) return;
+                  setLoadingRound16(true);
+                  await onOpenRound16();
+                  setLoadingRound16(false);
+                  alert('✓ Pronóstico de 16 clasificados abierto. Avísales a todos.');
+                }}
+                style={{width:'100%',padding:'14px',background:loadingRound16?'rgba(255,255,255,0.06)':'rgba(251,191,36,0.15)',border:'1px solid rgba(251,191,36,0.4)',color:'#fbbf24',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingRound16?'default':'pointer'}}>
+                {loadingRound16?'⏳ Procesando...':'🔓 Abrir pronóstico R32'}
+              </button>
+              <button disabled={loadingRound16}
+                onClick={async()=>{
+                  if(!confirm('¿Cerrar pronóstico de 16 clasificados?')) return;
+                  setLoadingRound16(true);
+                  await onCloseRound16();
+                  setLoadingRound16(false);
+                  alert('✓ Pronóstico de 16 clasificados cerrado.');
+                }}
+                style={{width:'100%',padding:'14px',background:loadingRound16?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingRound16?'default':'pointer'}}>
+                {loadingRound16?'⏳ Procesando...':'🔒 Cerrar pronóstico R32'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -623,7 +656,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
             </div>
           ) : (
             <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-              {[...users].filter(u=>!u.isAdmin).sort((a,b)=>(b.points||0)-(a.points||0)).map(u => {
+              {[...users].sort((a,b)=>(b.points||0)-(a.points||0)).map(u => {
                 const pts = calcUserPoints(u, matches);
                 const diff = (u.points||0) - pts.total;
                 const team = getTeamById(u.avatar);
