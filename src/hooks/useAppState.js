@@ -8,11 +8,11 @@ import { matches as initialMatches } from '../data/matches';
 const getPhasePoints = (phase) => {
   switch(phase) {
     case 'groups':   return { correct: 1, exact: 4 };
-    case 'round16':  return { correct: 3, exact: 6 };
-    case 'quarters': return { correct: 4, exact: 8 };
-    case 'semis':    return { correct: 5, exact: 10 };
-    case 'third':    return { correct: 6, exact: 12 };
-    case 'final':    return { correct: 7, exact: 14 };
+    case 'round16':  return { correct: 3, exact: 9 };
+    case 'quarters': return { correct: 4, exact: 12 };
+    case 'semis':    return { correct: 5, exact: 15 };
+    case 'third':    return { correct: 6, exact: 18 };
+    case 'final':    return { correct: 7, exact: 21 };
     default:         return { correct: 1, exact: 4 };
   }
 };
@@ -309,6 +309,21 @@ const useAppState = () => {
     }
   };
 
+  // ✅ NUEVO: Recalcular todos los puntos de todos los usuarios
+  const recalculateAllPoints = async () => {
+    const matchesSnap = await getDocs(collection(db, 'matches'));
+    const freshMatches = matchesSnap.docs.map(d => ({ ...d.data(), id: parseInt(d.id) }));
+    const usersSnap = await getDocs(collection(db, 'users'));
+    for (const userDoc of usersSnap.docs) {
+      const user = userDoc.data();
+      const updated = recalculateUserPoints(user, freshMatches);
+      await updateDoc(doc(db, 'users', userDoc.id), {
+        points: updated.points,
+        stats: updated.stats
+      });
+    }
+  };
+
   const deleteUser = async (userId) => {
     await deleteDoc(doc(db, 'users', userId));
   };
@@ -374,6 +389,7 @@ const useAppState = () => {
     saveGroupPrediction, saveRound16Prediction,
     updateMatchResult, updateRound16Results,
     updateGroupResult, updateChampion,
+    recalculateAllPoints,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
     openAllGroups, closeAllGroups, groupsForceOpen

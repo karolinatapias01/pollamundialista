@@ -32,11 +32,11 @@ const todayCol = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Ameri
 const getPhasePoints = (phase) => {
   switch(phase) {
     case 'groups':   return { correct: 1, exact: 4 };
-    case 'round16':  return { correct: 3, exact: 6 };
-    case 'quarters': return { correct: 4, exact: 8 };
-    case 'semis':    return { correct: 5, exact: 10 };
-    case 'third':    return { correct: 6, exact: 12 };
-    case 'final':    return { correct: 7, exact: 14 };
+    case 'round16':  return { correct: 3, exact: 9 };
+    case 'quarters': return { correct: 4, exact: 12 };
+    case 'semis':    return { correct: 5, exact: 15 };
+    case 'third':    return { correct: 6, exact: 18 };
+    case 'final':    return { correct: 7, exact: 21 };
     default:         return { correct: 1, exact: 4 };
   }
 };
@@ -79,7 +79,7 @@ const calcUserPoints = (user, matches) => {
   return { matchPts, groupPts, round16Pts, championPts, total: matchPts + groupPts + round16Pts + championPts };
 };
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onRecalculateAll, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
@@ -96,6 +96,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [round16Saved, setRound16Saved] = useState(false);
   const [savingR16, setSavingR16] = useState(false);
   const [verifyUser, setVerifyUser] = useState(null);
+  const [recalculating, setRecalculating] = useState(false);
 
   const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
   const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
@@ -544,6 +545,31 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
             <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Desglose de puntos por usuario</p>
           </div>
 
+          {!verifyUser && (
+            <div style={{marginBottom:'16px',padding:'14px',borderRadius:'12px',background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.2)'}}>
+              <div style={{fontSize:'13px',color:'rgba(255,255,255,0.5)',marginBottom:'10px'}}>
+                Recalcula los puntos de todos los usuarios con las reglas actuales. No borra pronósticos ni resultados.
+              </div>
+              <button
+                disabled={recalculating}
+                onClick={async()=>{
+                  if(!confirm('¿Recalcular puntos de todos los usuarios? Esto puede tomar unos segundos.')) return;
+                  setRecalculating(true);
+                  try {
+                    await onRecalculateAll();
+                    alert('✅ ¡Listo! Puntos recalculados para todos los usuarios.');
+                  } catch(e) {
+                    alert('Error al recalcular. Intente de nuevo.');
+                  } finally {
+                    setRecalculating(false);
+                  }
+                }}
+                style={{width:'100%',padding:'12px',background:recalculating?'rgba(255,255,255,0.06)':'linear-gradient(135deg,#3b82f6,#2563eb)',border:'none',color:recalculating?'rgba(255,255,255,0.3)':'white',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:recalculating?'default':'pointer'}}>
+                {recalculating?'⏳ Recalculando...':'🔄 Recalcular todos los puntos'}
+              </button>
+            </div>
+          )}
+
           {verifyUser ? (
             <div>
               <button onClick={()=>setVerifyUser(null)}
@@ -572,7 +598,6 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                         ))}
                       </div>
                     </div>
-
                     <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
                       {[
                         {label:'⚽ Partidos', val:pts.matchPts, color:'#60a5fa'},
@@ -586,11 +611,10 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                         </div>
                       ))}
                     </div>
-
                     {diff !== 0 && (
                       <div style={{marginTop:'12px',padding:'12px',borderRadius:'10px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)'}}>
                         <div style={{fontSize:'13px',color:'#f87171',fontWeight:'600'}}>⚠️ Hay diferencia de {diff} pts</div>
-                        <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'4px'}}>Para corregir, vuelve a guardar los clasificados de grupos en la sección 📊</div>
+                        <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'4px'}}>Use el botón 🔄 Recalcular para corregir.</div>
                       </div>
                     )}
                   </div>
@@ -686,7 +710,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
             <li>• Los pendientes no pueden pronosticar</li>
             <li>• El número rojo en ⏳ indica cuántos esperan aprobación</li>
             <li>• Confirma los 16 clasificados solo cuando terminen todos los partidos de la Ronda de 32</li>
-            <li>• Si hay diferencia en 📋 Verificar, vuelve a guardar los clasificados en 📊</li>
+            <li>• Use 🔄 Recalcular en 📋 Verificar si hay diferencias en los puntos</li>
           </ul>
         </div>
       </div>

@@ -82,6 +82,7 @@ function App() {
     saveGroupPrediction, saveRound16Prediction,
     updateMatchResult, updateRound16Results,
     updateGroupResult, updateChampion,
+    recalculateAllPoints,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
     openAllGroups, closeAllGroups, groupsForceOpen
@@ -264,7 +265,7 @@ function App() {
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
         {activeTab==='news'    && <News/>}
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups}/>}
+        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} onRecalculateAll={recalculateAllPoints} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups}/>}
       </main>
 
       <button onClick={()=>setShowRules(true)}
@@ -286,24 +287,24 @@ function App() {
               ]},
               { title:'🔥 Ronda de 32', items:[
                 { label:'Resultado correcto', pts:'+3 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+6 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+9 pts', color:'#fde047' },
                 { label:'Equipo clasificado adivinado', pts:'+2 pts', color:'#c084fc' },
               ]},
               { title:'💪 Octavos de final', items:[
                 { label:'Resultado correcto', pts:'+4 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+8 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+12 pts', color:'#fde047' },
               ]},
               { title:'🏅 Semis y Cuartos', items:[
                 { label:'Resultado correcto', pts:'+5 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+10 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+15 pts', color:'#fde047' },
               ]},
               { title:'🥉 3er puesto', items:[
                 { label:'Resultado correcto', pts:'+6 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+12 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+18 pts', color:'#fde047' },
               ]},
               { title:'🥇 Final', items:[
                 { label:'Resultado correcto', pts:'+7 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+14 pts', color:'#fde047' },
+                { label:'Marcador exacto', pts:'+21 pts', color:'#fde047' },
               ]},
               { title:'📊 Clasificados de grupo', items:[
                 { label:'1° y 2° en orden exacto', pts:'+10 pts', color:'#fde047' },
