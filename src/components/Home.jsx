@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, LogOut } from 'lucide-react';
-import Auth from './components/Auth';
 import Home from './components/Home';
 import Matches from './components/Matches';
 import Ranking from './components/Ranking';
