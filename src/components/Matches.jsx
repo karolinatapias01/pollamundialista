@@ -29,11 +29,11 @@ const formatTimestamp = (ts) => {
 
 const getPhaseLabel = (phase) => {
   switch(phase) {
-    case 'round16':  return { correct: 3, exact: 6 };
-    case 'quarters': return { correct: 4, exact: 8 };
-    case 'semis':    return { correct: 5, exact: 10 };
-    case 'third':    return { correct: 6, exact: 12 };
-    case 'final':    return { correct: 7, exact: 14 };
+    case 'round16':  return { correct: 3, exact: 9 };
+    case 'quarters': return { correct: 4, exact: 12 };
+    case 'semis':    return { correct: 5, exact: 15 };
+    case 'third':    return { correct: 6, exact: 18 };
+    case 'final':    return { correct: 7, exact: 21 };
     default:         return { correct: 1, exact: 4 };
   }
 };
