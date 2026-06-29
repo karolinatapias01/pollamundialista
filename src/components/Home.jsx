@@ -1,359 +1,454 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, LogOut } from 'lucide-react';
-import Home from './components/Home';
-import Matches from './components/Matches';
-import Ranking from './components/Ranking';
-import Results from './components/Results';
-import History from './components/History';
-import Groups from './components/Groups';
-import News from './components/News';
-import AdminPanel from './components/AdminPanel';
-import Tutorial from './components/Tutorial';
-import useAppState from './hooks/useAppState';
-import { startAutoSync } from './syncService';
-import { startNotifications } from './notifications';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ChevronRight, Clock } from 'lucide-react';
+import { getTeamById } from '../data/teams';
 
-const PendingScreen = ({ currentUser, onLogout }) => {
-  const [timeLeft, setTimeLeft] = useState(() => {
-    const registered = parseInt(currentUser.id);
-    const elapsed = Math.floor((Date.now() - registered) / 1000);
-    return Math.max(0, 300 - elapsed);
-  });
-  const [expired, setExpired] = useState(() => {
-    const registered = parseInt(currentUser.id);
-    const elapsed = Math.floor((Date.now() - registered) / 1000);
-    return elapsed >= 300;
-  });
+const card = { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'16px' };
 
+const Flag = ({ code, size = 32 }) => {
+  if (!code) return <span style={{fontSize:size*0.7+'px'}}>🏳️</span>;
+  return (
+    <img src={`https://hatscripts.github.io/circle-flags/flags/${code.toLowerCase()}.svg`}
+      width={size} height={size} alt={code}
+      style={{borderRadius:'50%',objectFit:'cover'}}
+      onError={e=>{e.target.style.display='none';}}/>
+  );
+};
+
+const useCountdown = (targetDate) => {
+  const [timeLeft, setTimeLeft] = useState('');
   useEffect(() => {
-    if (expired) return;
-    if (timeLeft <= 0) { setExpired(true); return; }
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) { setExpired(true); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
+    if (!targetDate) return;
+    const update = () => {
+      const diff = new Date(targetDate) - new Date();
+      if (diff <= 0) { setTimeLeft('¡Ya empezó!'); return; }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      if (d > 0) setTimeLeft(`${d}d ${h}h ${m}m`);
+      else if (h > 0) setTimeLeft(`${h}h ${m}m ${s}s`);
+      else setTimeLeft(`${m}m ${s}s`);
+    };
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [expired]);
+  }, [targetDate]);
+  return timeLeft;
+};
 
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
+const ALL_GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
-  if (expired) {
-    return (
-      <div style={{ minHeight:'100vh', background:'#0a0e1a', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
-        <div style={{ textAlign:'center', maxWidth:'380px' }}>
-          <div style={{ fontSize:'56px', marginBottom:'20px' }}>⏳</div>
-          <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>Tiempo de prueba terminado</div>
-          <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.6)', lineHeight:'1.6', marginBottom:'24px' }}>
-            Espero que te haya gustado la app. Para activar tu cuenta y empezar a pronosticar avísale al administrador que ya pagaste.
-          </div>
-          <div style={{ padding:'16px', borderRadius:'14px', background:'rgba(249,115,22,0.1)', border:'1px solid rgba(249,115,22,0.2)', marginBottom:'24px' }}>
-            <div style={{ fontSize:'13px', color:'#fb923c', fontWeight:'600', marginBottom:'4px' }}>Tu nombre registrado:</div>
-            <div style={{ fontSize:'15px', color:'white', fontWeight:'700' }}>{currentUser.name}</div>
-          </div>
-          <button onClick={onLogout}
-            style={{ padding:'12px 32px', background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', color:'white', fontSize:'14px', fontWeight:'600', borderRadius:'12px', cursor:'pointer' }}>
-            Salir
-          </button>
-        </div>
-      </div>
-    );
-  }
+const Home = ({ users, currentUser, matches, onNavigate }) => {
+  const [showGroupsDetail, setShowGroupsDetail] = useState(false);
+
+  const liveUser = users.find(u => u.id === currentUser.id) || currentUser;
+
+  const sortedUsers = [...users].sort((a,b) => (b.points||0) - (a.points||0));
+  const myPosition = sortedUsers.findIndex(u => u.id === currentUser.id) + 1;
+
+  const nextMatch = useMemo(() => {
+    const now = new Date();
+    return matches
+      .filter(m => m.status !== 'finished' && m.homeTeam && m.awayTeam && new Date(m.date) > now)
+      .sort((a,b) => new Date(a.date) - new Date(b.date))[0];
+  }, [matches]);
+
+  const lastMatch = useMemo(() => {
+    return matches
+      .filter(m => m.status === 'finished')
+      .sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+  }, [matches]);
+
+  const todayMatches = useMemo(() => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    return matches.filter(m => {
+      const d = new Date(m.date).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+      return d === today && m.homeTeam && m.awayTeam;
+    });
+  }, [matches]);
+
+  const countdown = useCountdown(nextMatch?.date);
+
+  const formatTime = (ds) => new Date(ds).toLocaleTimeString('es-CO',{
+    timeZone:'America/Bogota', hour:'2-digit', minute:'2-digit', hour12:true
+  });
+
+  const formatDate = (ds) => new Date(ds).toLocaleDateString('es-CO',{
+    timeZone:'America/Bogota', weekday:'short', day:'numeric', month:'short'
+  });
+
+  const pendingToday = todayMatches.filter(m => {
+    const canPredict = new Date() < new Date(new Date(m.date).getTime() - 10*60*1000);
+    return canPredict && !liveUser.predictions?.[m.id] && m.status !== 'finished';
+  });
+
+  const pendingGroups = useMemo(() => {
+    return ALL_GROUPS.filter(g => {
+      const firstMatch = matches
+        .filter(m => m.phase==='groups' && m.group===g)
+        .sort((a,b) => new Date(a.date)-new Date(b.date))[0];
+      if (!firstMatch) return false;
+      const isOpen = new Date() < new Date(firstMatch.date);
+      const hasPred = liveUser.groupPredictions?.[g];
+      return isOpen && !hasPred;
+    });
+  }, [matches, liveUser]);
+
+  const groupsWithResults = useMemo(() => {
+    const results = liveUser.groupResults || {};
+    return ALL_GROUPS.filter(g => results[g]?.first && results[g]?.second);
+  }, [liveUser]);
+
+  const myGroupPoints = useMemo(() => {
+    const results = liveUser.groupResults || {};
+    const preds = liveUser.groupPredictions || {};
+    let total = 0;
+    groupsWithResults.forEach(g => {
+      const pred = preds[g];
+      const result = results[g];
+      if (!pred || !result) return;
+      if (pred.first === result.first && pred.second === result.second) total += 10;
+      else if (
+        (pred.first === result.first || pred.first === result.second) &&
+        (pred.second === result.first || pred.second === result.second)
+      ) total += 5;
+      else if (
+        pred.first === result.first || pred.first === result.second ||
+        pred.second === result.first || pred.second === result.second
+      ) total += 2;
+    });
+    return total;
+  }, [liveUser, groupsWithResults]);
+
+  const s = (key) => liveUser?.stats?.[key] ?? 0;
 
   return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, zIndex:1000, background:'rgba(249,115,22,0.95)', padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-      <div style={{ fontSize:'13px', color:'white', fontWeight:'500' }}>
-        ⏱️ Modo prueba — No puedes pronosticar aún
+    <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
+
+      {/* Bienvenida */}
+      <div style={{...card, padding:'20px 22px', position:'relative', overflow:'hidden'}}>
+        <div style={{position:'absolute',top:0,left:0,right:0,height:'3px',background:'linear-gradient(90deg,#16a34a,#4ade80)'}}/>
+        <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px'}}>
+          <div style={{fontSize:'36px'}}>{liveUser.avatar?.length<=2?liveUser.avatar:'👤'}</div>
+          <div>
+            <div style={{fontSize:'18px',fontWeight:'800',color:'white'}}>
+              ¡Hola, {liveUser.nickname||liveUser.name}!
+            </div>
+            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.45)',marginTop:'2px'}}>
+              Mundial 2026 · {matches.filter(m=>m.status==='finished').length} partidos jugados
+            </div>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'8px'}}>
+          {[
+            {label:'Posición', val:myPosition>0?`#${myPosition}`:'-', color:'#fbbf24', icon:'🏅'},
+            {label:'Puntos',   val:liveUser.points||0,                 color:'#4ade80', icon:'⭐'},
+            {label:'Aciertos', val:s('correctPredictions'),            color:'#60a5fa', icon:'✓'},
+            {label:'Exactos',  val:s('exactScores'),                   color:'#fde047', icon:'🎯'},
+          ].map(stat=>(
+            <div key={stat.label} style={{background:'rgba(255,255,255,0.05)',borderRadius:'12px',padding:'12px 8px',textAlign:'center'}}>
+              <div style={{fontSize:'8px',marginBottom:'4px'}}>{stat.icon}</div>
+              <div style={{fontSize:'20px',fontWeight:'800',color:stat.color}}>{stat.val}</div>
+              <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)',marginTop:'2px'}}>{stat.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div style={{ fontSize:'15px', fontWeight:'800', color:'white', background:'rgba(0,0,0,0.2)', padding:'4px 12px', borderRadius:'8px' }}>
-        {minutes}:{seconds.toString().padStart(2,'0')}
-      </div>
+
+      {/* AVISO: Puntos de grupos asignados */}
+      {groupsWithResults.length > 0 && (
+        <div style={{borderRadius:'14px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.25)',overflow:'hidden'}}>
+          <div style={{padding:'14px 16px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontSize:'13px',fontWeight:'700',color:'#4ade80',marginBottom:'3px'}}>
+                  📊 Puntos de clasificados asignados
+                </div>
+                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)'}}>
+                  {groupsWithResults.length} grupo{groupsWithResults.length>1?'s':''} calificados · Tú obtuviste{' '}
+                  <span style={{color:'#4ade80',fontWeight:'700'}}>{myGroupPoints} pts</span> de grupos
+                </div>
+              </div>
+              <button onClick={()=>setShowGroupsDetail(!showGroupsDetail)}
+                style={{padding:'6px 12px',borderRadius:'8px',background:'rgba(74,222,128,0.15)',border:'1px solid rgba(74,222,128,0.3)',color:'#4ade80',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap',marginLeft:'10px'}}>
+                {showGroupsDetail ? 'Ocultar' : 'Ver detalle'}
+              </button>
+            </div>
+          </div>
+
+          {showGroupsDetail && (
+            <div style={{borderTop:'1px solid rgba(74,222,128,0.15)',padding:'12px 16px',display:'flex',flexDirection:'column',gap:'8px'}}>
+              {groupsWithResults.map(g => {
+                const results = liveUser.groupResults || {};
+                const preds = liveUser.groupPredictions || {};
+                const result = results[g];
+                const pred = preds[g];
+                const first = getTeamById(result?.first);
+                const second = getTeamById(result?.second);
+                const predFirst = getTeamById(pred?.first);
+                const predSecond = getTeamById(pred?.second);
+
+                let pts = 0;
+                let label = '';
+                if (pred && result) {
+                  if (pred.first === result.first && pred.second === result.second) {
+                    pts = 10; label = '🥇 Orden exacto';
+                  } else if (
+                    (pred.first === result.first || pred.first === result.second) &&
+                    (pred.second === result.first || pred.second === result.second)
+                  ) {
+                    pts = 5; label = '✓ Ambos equipos';
+                  } else if (
+                    pred.first === result.first || pred.first === result.second ||
+                    pred.second === result.first || pred.second === result.second
+                  ) {
+                    pts = 2; label = '~ Un equipo';
+                  } else {
+                    pts = 0; label = '✗ Sin acierto';
+                  }
+                }
+
+                return (
+                  <div key={g} style={{padding:'10px 12px',borderRadius:'10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
+                      <span style={{fontSize:'12px',fontWeight:'700',color:'rgba(255,255,255,0.6)'}}>Grupo {g}</span>
+                      <span style={{fontSize:'13px',fontWeight:'800',color:pts>0?'#4ade80':'#f87171'}}>
+                        {pts>0?`+${pts} pts`:pred?label:'Sin pronóstico'}
+                      </span>
+                    </div>
+                    <div style={{display:'flex',gap:'12px'}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Resultado</div>
+                        <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                            <Flag code={first?.flagCode} size={14}/>
+                            <span style={{fontSize:'11px',color:'rgba(255,255,255,0.7)'}}>🥇 {first?.name||'—'}</span>
+                          </div>
+                          <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                            <Flag code={second?.flagCode} size={14}/>
+                            <span style={{fontSize:'11px',color:'rgba(255,255,255,0.7)'}}>🥈 {second?.name||'—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Tu pronóstico</div>
+                        {pred ? (
+                          <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                              <Flag code={predFirst?.flagCode} size={14}/>
+                              <span style={{fontSize:'11px',color:'rgba(255,255,255,0.7)'}}>🥇 {predFirst?.name||'—'}</span>
+                            </div>
+                            <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                              <Flag code={predSecond?.flagCode} size={14}/>
+                              <span style={{fontSize:'11px',color:'rgba(255,255,255,0.7)'}}>🥈 {predSecond?.name||'—'}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{fontSize:'11px',color:'rgba(255,255,255,0.3)'}}>Sin pronóstico</span>
+                        )}
+                      </div>
+                    </div>
+                    {pts > 0 && label && (
+                      <div style={{marginTop:'6px',fontSize:'10px',color:'rgba(74,222,128,0.7)'}}>{label}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Alerta grupos sin pronosticar */}
+      {pendingGroups.length > 0 && (
+        <div style={{padding:'14px 16px',borderRadius:'14px',background:'rgba(168,85,247,0.1)',border:'1px solid rgba(168,85,247,0.3)'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div>
+              <div style={{fontSize:'13px',fontWeight:'700',color:'#c084fc',marginBottom:'3px'}}>
+                📊 Tienes {pendingGroups.length} grupo{pendingGroups.length>1?'s':''} sin pronosticar
+              </div>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)'}}>
+                Grupo{pendingGroups.length>1?'s':''}: {pendingGroups.join(', ')} · ¡Hazlo antes de que cierren!
+              </div>
+            </div>
+            <button onClick={()=>onNavigate('groups')}
+              style={{padding:'8px 14px',borderRadius:'10px',background:'rgba(168,85,247,0.2)',border:'1px solid rgba(168,85,247,0.4)',color:'#c084fc',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap',marginLeft:'10px'}}>
+              Ir →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Alerta partidos pendientes hoy */}
+      {pendingToday.length > 0 && (
+        <div style={{padding:'14px 16px',borderRadius:'14px',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div>
+              <div style={{fontSize:'13px',fontWeight:'700',color:'#fbbf24',marginBottom:'3px'}}>
+                ⚠️ Tienes {pendingToday.length} partido{pendingToday.length>1?'s':''} sin pronosticar hoy
+              </div>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)'}}>
+                {pendingToday.map(m=>{
+                  const h=getTeamById(m.homeTeam); const a=getTeamById(m.awayTeam);
+                  return `${h?.name} vs ${a?.name}`;
+                }).join(' · ')}
+              </div>
+            </div>
+            <button onClick={()=>{
+              const phase = pendingToday[0]?.phase || 'groups';
+              onNavigate('matches', phase);
+            }}
+              style={{padding:'8px 14px',borderRadius:'10px',background:'rgba(251,191,36,0.2)',border:'1px solid rgba(251,191,36,0.4)',color:'#fbbf24',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap',marginLeft:'10px'}}>
+              Ir →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Próximo partido */}
+      {nextMatch && (
+        <div style={{...card,padding:'18px 20px',position:'relative',overflow:'hidden'}}>
+          <div style={{position:'absolute',top:0,left:0,right:0,height:'3px',background:'linear-gradient(90deg,#3b82f6,#60a5fa)'}}/>
+          <div style={{fontSize:'11px',fontWeight:'600',color:'#93c5fd',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'12px'}}>
+            ⚡ Próximo partido
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'12px',marginBottom:'14px'}}>
+            <div style={{textAlign:'center'}}>
+              <div style={{display:'flex',justifyContent:'center',marginBottom:'6px'}}>
+                <Flag code={getTeamById(nextMatch.homeTeam)?.flagCode} size={40}/>
+              </div>
+              <div style={{fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.85)'}}>{getTeamById(nextMatch.homeTeam)?.name}</div>
+            </div>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:'22px',fontWeight:'300',color:'rgba(255,255,255,0.2)',letterSpacing:'4px',marginBottom:'4px'}}>vs</div>
+              <div style={{fontSize:'12px',color:'#4ade80',fontWeight:'700'}}>{countdown}</div>
+            </div>
+            <div style={{textAlign:'center'}}>
+              <div style={{display:'flex',justifyContent:'center',marginBottom:'6px'}}>
+                <Flag code={getTeamById(nextMatch.awayTeam)?.flagCode} size={40}/>
+              </div>
+              <div style={{fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.85)'}}>{getTeamById(nextMatch.awayTeam)?.name}</div>
+            </div>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)'}}>
+              <Clock size={12} style={{display:'inline',marginRight:'4px'}}/>
+              {formatDate(nextMatch.date)} · {formatTime(nextMatch.date)}
+            </div>
+            {!liveUser.predictions?.[nextMatch.id] && (
+              <button onClick={()=>onNavigate('matches', nextMatch.phase)}
+                style={{padding:'6px 12px',borderRadius:'8px',background:'linear-gradient(135deg,#16a34a,#15803d)',border:'none',color:'white',fontSize:'12px',fontWeight:'600',cursor:'pointer'}}>
+                Pronosticar
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Partidos de hoy */}
+      {todayMatches.length > 0 && (
+        <div style={{...card,padding:'16px 18px'}}>
+          <div style={{fontSize:'11px',fontWeight:'600',color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'12px'}}>
+            📅 Partidos de hoy ({todayMatches.length})
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+            {todayMatches.map(m=>{
+              const h=getTeamById(m.homeTeam); const a=getTeamById(m.awayTeam);
+              const hasPred = liveUser.predictions?.[m.id];
+              const isFinished = m.status==='finished';
+              return(
+                <div key={m.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',borderRadius:'10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+                  <Flag code={h?.flagCode} size={24}/>
+                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.7)',fontWeight:'500'}}>{h?.name}</span>
+                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.3)',margin:'0 4px'}}>
+                    {isFinished?`${m.homeScore}-${m.awayScore}`:'vs'}
+                  </span>
+                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.7)',fontWeight:'500'}}>{a?.name}</span>
+                  <Flag code={a?.flagCode} size={24}/>
+                  <span style={{marginLeft:'auto',fontSize:'11px',color:'rgba(255,255,255,0.3)'}}>{formatTime(m.date)}</span>
+                  {!isFinished && (
+                    <span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'6px',
+                      background:hasPred?'rgba(74,222,128,0.15)':'rgba(251,191,36,0.15)',
+                      color:hasPred?'#4ade80':'#fbbf24',
+                      border:`1px solid ${hasPred?'rgba(74,222,128,0.3)':'rgba(251,191,36,0.3)'}`}}>
+                      {hasPred?'✓':'Pendiente'}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Último resultado */}
+      {lastMatch && (
+        <div style={{...card,padding:'16px 18px'}}>
+          <div style={{fontSize:'11px',fontWeight:'600',color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'12px'}}>
+            🏁 Último resultado
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'12px'}}>
+            <div style={{textAlign:'center'}}>
+              <div style={{display:'flex',justifyContent:'center',marginBottom:'6px'}}><Flag code={getTeamById(lastMatch.homeTeam)?.flagCode} size={32}/></div>
+              <div style={{fontSize:'12px',fontWeight:'600',color:lastMatch.homeScore>lastMatch.awayScore?'white':'rgba(255,255,255,0.5)'}}>{getTeamById(lastMatch.homeTeam)?.name}</div>
+            </div>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:'26px',fontWeight:'800',color:'white',letterSpacing:'-1px'}}>{lastMatch.homeScore} - {lastMatch.awayScore}</div>
+              <div style={{fontSize:'10px',color:'rgba(255,255,255,0.3)',marginTop:'2px'}}>{formatDate(lastMatch.date)}</div>
+            </div>
+            <div style={{textAlign:'center'}}>
+              <div style={{display:'flex',justifyContent:'center',marginBottom:'6px'}}><Flag code={getTeamById(lastMatch.awayTeam)?.flagCode} size={32}/></div>
+              <div style={{fontSize:'12px',fontWeight:'600',color:lastMatch.awayScore>lastMatch.homeScore?'white':'rgba(255,255,255,0.5)'}}>{getTeamById(lastMatch.awayTeam)?.name}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mini ranking */}
+      {sortedUsers.length > 0 && (
+        <div style={{...card,padding:'16px 18px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
+            <div style={{fontSize:'11px',fontWeight:'600',color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+              🏆 Ranking
+            </div>
+            <button onClick={()=>onNavigate('ranking')}
+              style={{fontSize:'12px',color:'#4ade80',background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:'3px'}}>
+              Ver todo <ChevronRight size={13}/>
+            </button>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+            {sortedUsers.slice(0,5).map((user,idx)=>{
+              const isMe = user.id===currentUser.id;
+              const medals=['🥇','🥈','🥉'];
+              return(
+                <div key={user.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'8px 10px',borderRadius:'10px',
+                  background:isMe?'rgba(74,222,128,0.08)':'transparent',
+                  border:isMe?'1px solid rgba(74,222,128,0.2)':'1px solid transparent'}}>
+                  <span style={{fontSize:idx<3?'16px':'13px',fontWeight:'600',color:'rgba(255,255,255,0.4)',width:'22px',textAlign:'center'}}>
+                    {idx<3?medals[idx]:`${idx+1}`}
+                  </span>
+                  <span style={{fontSize:'20px'}}>{user.avatar?.length<=2?user.avatar:'👤'}</span>
+                  <span style={{fontSize:'13px',fontWeight:'500',color:isMe?'#4ade80':'rgba(255,255,255,0.8)',flex:1}}>
+                    {user.name}{user.nickname?` "${user.nickname}"`:''} 
+                    {isMe&&<span style={{fontSize:'10px',color:'#4ade80',marginLeft:'6px'}}>tú</span>}
+                  </span>
+                  <span style={{fontSize:'16px',fontWeight:'800',color:'#4ade80'}}>{user.points||0}</span>
+                </div>
+              );
+            })}
+            {myPosition > 5 && (
+              <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'8px 10px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)'}}>
+                <span style={{fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.4)',width:'22px',textAlign:'center'}}>{myPosition}</span>
+                <span style={{fontSize:'20px'}}>{liveUser.avatar?.length<=2?liveUser.avatar:'👤'}</span>
+                <span style={{fontSize:'13px',fontWeight:'500',color:'#4ade80',flex:1}}>{liveUser.name}{liveUser.nickname?` "${liveUser.nickname}"`:''} <span style={{fontSize:'10px'}}>tú</span></span>
+                <span style={{fontSize:'16px',fontWeight:'800',color:'#4ade80'}}>{liveUser.points||0}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-function App() {
-  const {
-    currentUser, users, matches, reactions, loading,
-    setCurrentUser, registerUser, makePrediction,
-    saveGroupPrediction, saveRound16Prediction,
-    updateMatchResult, updateRound16Results,
-    updateGroupResult, updateChampion,
-    addReaction, removeReaction, deleteUser,
-    approveUser, rejectUser, resetAllUsers,
-    openAllGroups, closeAllGroups, groupsForceOpen
-  } = useAppState();
-
-  const [activeTab, setActiveTab] = useState('home');
-  const [matchesPhase, setMatchesPhase] = useState('groups');
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(() => {
-    return !localStorage.getItem('polla_tutorial_done');
-  });
-  const [trialExpired, setTrialExpired] = useState(false);
-  const [showRules, setShowRules] = useState(false);
-
-  const handleNavigate = (tab, phase) => {
-    setActiveTab(tab);
-    if (phase) setMatchesPhase(phase);
-  };
-
-  const handleFinishTutorial = () => {
-    localStorage.setItem('polla_tutorial_done', 'true');
-    setShowTutorial(false);
-  };
-
-  useEffect(() => {
-    if (currentUser) setActiveTab('home');
-  }, [currentUser?.id]);
-
-  useEffect(() => {
-    const interval = startAutoSync();
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    const interval = startNotifications(matches, currentUser);
-    return () => clearInterval(interval);
-  }, [matches, currentUser]);
-
-  useEffect(() => {
-    if (!currentUser || currentUser.approved || currentUser.isAdmin) return;
-    const registered = parseInt(currentUser.id);
-    const elapsed = Math.floor((Date.now() - registered) / 1000);
-    if (elapsed >= 300) { setTrialExpired(true); return; }
-    const remaining = 300 - elapsed;
-    const timeout = setTimeout(() => setTrialExpired(true), remaining * 1000);
-    return () => clearTimeout(timeout);
-  }, [currentUser]);
-
-  if (!currentUser) {
-    return <Auth onLogin={setCurrentUser} onRegister={registerUser} users={users} />;
-  }
-
-  if (loading) {
-    return (
-      <div style={{ minHeight:'100vh', background:'#0a0e1a', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:'40px', marginBottom:'16px' }}>⚽</div>
-          <div style={{ color:'rgba(255,255,255,0.5)', fontSize:'15px' }}>Cargando PollaMundialista...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (trialExpired && !currentUser.approved && !currentUser.isAdmin) {
-    return (
-      <div style={{ minHeight:'100vh', background:'#0a0e1a', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
-        <div style={{ textAlign:'center', maxWidth:'380px' }}>
-          <div style={{ fontSize:'56px', marginBottom:'20px' }}>⏳</div>
-          <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'12px' }}>Tiempo de prueba terminado</div>
-          <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.6)', lineHeight:'1.6', marginBottom:'24px' }}>
-            Espero que te haya gustado la app. Para activar tu cuenta avísale al administrador que ya pagaste.
-          </div>
-          <div style={{ padding:'16px', borderRadius:'14px', background:'rgba(249,115,22,0.1)', border:'1px solid rgba(249,115,22,0.2)', marginBottom:'24px' }}>
-            <div style={{ fontSize:'13px', color:'#fb923c', fontWeight:'600', marginBottom:'4px' }}>Tu nombre registrado:</div>
-            <div style={{ fontSize:'15px', color:'white', fontWeight:'700' }}>{currentUser.name}</div>
-          </div>
-          <button onClick={() => setCurrentUser(null)}
-            style={{ padding:'12px 32px', background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', color:'white', fontSize:'14px', fontWeight:'600', borderRadius:'12px', cursor:'pointer' }}>
-            Salir
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const tabs = [
-    { id:'home',    label:'Inicio',     emoji:'🏠' },
-    { id:'matches', label:'Partidos',   emoji:'⚽' },
-    { id:'groups',  label:'Grupos',     emoji:'📊' },
-    { id:'results', label:'Resultados', emoji:'🏁' },
-    { id:'ranking', label:'Ranking',    emoji:'🏆' },
-    { id:'news',    label:'Noticias',   emoji:'📰' },
-    { id:'history', label:'Historial',  emoji:'📋' },
-    ...(currentUser.isAdmin ? [{ id:'admin', label:'Admin', emoji:'👑' }] : [])
-  ];
-
-  const bottomTabs = [
-    { id:'home',    label:'Inicio',     emoji:'🏠' },
-    { id:'matches', label:'Partidos',   emoji:'⚽' },
-    { id:'results', label:'Resultados', emoji:'🏁' },
-    { id:'ranking', label:'Ranking',    emoji:'🏆' },
-    { id:'news',    label:'Noticias',   emoji:'📰' },
-  ];
-
-  const isPending = !currentUser.approved && !currentUser.isAdmin;
-
-  return (
-    <div style={{ minHeight:'100vh', background:'#0a0e1a' }}>
-
-      {isPending && !trialExpired && (
-        <PendingScreen currentUser={currentUser} onLogout={() => setCurrentUser(null)}/>
-      )}
-
-      {showTutorial && currentUser && <Tutorial onFinish={handleFinishTutorial}/>}
-
-      <header style={{ background:'linear-gradient(135deg,#0f1f0f 0%,#0a1628 50%,#1a0a28 100%)', borderBottom:'1px solid rgba(255,255,255,0.08)', position:'sticky', top: isPending ? '44px' : 0, zIndex:50 }}>
-        <div style={{ maxWidth:'900px', margin:'0 auto', padding:'0 16px' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', height:'64px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-              <div style={{ width:'36px', height:'36px', background:'linear-gradient(135deg,#16a34a,#15803d)', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px' }}>⚽</div>
-              <div>
-                <span style={{ fontWeight:'800', color:'white', fontSize:'17px', letterSpacing:'-0.5px' }}>Polla</span>
-                <span style={{ fontWeight:'800', fontSize:'17px', color:'#4ade80', letterSpacing:'-0.5px' }}>Mundialista</span>
-                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.35)', lineHeight:1 }}>Mundial 2026</div>
-              </div>
-            </div>
-            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'6px 10px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px' }}>
-                <span style={{ fontSize:'18px' }}>{currentUser.avatar?.length<=2?currentUser.avatar:'👤'}</span>
-                <div>
-                  <p style={{ fontSize:'12px', fontWeight:'600', color:'white', lineHeight:1 }}>{currentUser.nickname||currentUser.name}</p>
-                  <p style={{ fontSize:'11px', color: isPending?'#fb923c':'#4ade80', marginTop:'2px' }}>{isPending?'⏳ Pendiente':currentUser.points+' pts'}</p>
-                </div>
-              </div>
-              <button onClick={()=>{ if(confirm('¿Salir?')) setCurrentUser(null); }}
-                style={{ padding:'8px', borderRadius:'8px', color:'rgba(255,255,255,0.4)', background:'none', border:'none', cursor:'pointer' }}>
-                <LogOut size={17}/>
-              </button>
-              <button onClick={()=>setMenuOpen(!menuOpen)}
-                style={{ padding:'8px', color:'rgba(255,255,255,0.7)', background:'none', border:'none', cursor:'pointer' }}>
-                {menuOpen?<X size={22}/>:<Menu size={22}/>}
-              </button>
-            </div>
-          </div>
-          {menuOpen && (
-            <div style={{ paddingBottom:'12px', borderTop:'1px solid rgba(255,255,255,0.08)', paddingTop:'12px' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'4px', marginBottom:'8px' }}>
-                {tabs.map(tab=>(
-                  <button key={tab.id} onClick={()=>{ setActiveTab(tab.id); setMenuOpen(false); }}
-                    style={{ textAlign:'left', padding:'10px 14px', borderRadius:'10px', fontSize:'14px', fontWeight:'500', cursor:'pointer',
-                      background:activeTab===tab.id?'rgba(74,222,128,0.12)':'transparent',
-                      color:activeTab===tab.id?'#4ade80':'rgba(255,255,255,0.65)', border:'none' }}>
-                    {tab.emoji} {tab.label}
-                  </button>
-                ))}
-              </div>
-              <button onClick={()=>{ if(confirm('¿Salir?')) setCurrentUser(null); }}
-                style={{ width:'100%', textAlign:'left', padding:'10px 14px', fontSize:'14px', color:'#f87171', background:'none', border:'none', cursor:'pointer' }}>
-                Salir
-              </button>
-              <button onClick={()=>{ setShowTutorial(true); setMenuOpen(false); }}
-                style={{ width:'100%', textAlign:'left', padding:'10px 14px', fontSize:'14px', color:'#93c5fd', background:'none', border:'none', cursor:'pointer' }}>
-                ❓ Ver tutorial
-              </button>
-              <button onClick={()=>{ setShowRules(true); setMenuOpen(false); }}
-                style={{ width:'100%', textAlign:'left', padding:'10px 14px', fontSize:'14px', color:'#c084fc', background:'none', border:'none', cursor:'pointer' }}>
-                📋 Ver reglas
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      <main style={{ maxWidth:'900px', margin:'0 auto', padding:'16px 16px 100px' }}>
-        {activeTab==='home'    && <Home users={users} currentUser={currentUser} matches={matches} onNavigate={handleNavigate}/>}
-        {activeTab==='matches' && <Matches matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} onSaveRound16Prediction={saveRound16Prediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users} initialPhase={matchesPhase}/>}
-        {activeTab==='groups'  && <Groups currentUser={currentUser} onSaveGroupPrediction={saveGroupPrediction} users={users} matches={matches} groupsForceOpen={groupsForceOpen}/>}
-        {activeTab==='results' && <Results matches={matches} currentUser={currentUser} users={users}/>}
-        {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
-        {activeTab==='news'    && <News/>}
-        {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups}/>}
-      </main>
-
-      <button onClick={()=>setShowRules(true)}
-        style={{ position:'fixed', bottom:'80px', right:'16px', zIndex:45, width:'44px', height:'44px', borderRadius:'50%', background:'linear-gradient(135deg,#7c3aed,#c026d3)', border:'none', cursor:'pointer', fontSize:'20px', boxShadow:'0 4px 20px rgba(124,58,237,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        📋
-      </button>
-
-      {showRules && (
-        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.8)', display:'flex', alignItems:'flex-end', justifyContent:'center' }}
-          onClick={()=>setShowRules(false)}>
-          <div style={{ background:'#0f1a2e', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'20px 20px 0 0', padding:'24px 20px', width:'100%', maxWidth:'500px', maxHeight:'80vh', overflowY:'auto' }}
-            onClick={e=>e.stopPropagation()}>
-            <div style={{ width:'40px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.2)', margin:'0 auto 20px' }}/>
-            <h2 style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'20px', textAlign:'center' }}>📋 Reglas y Puntos</h2>
-            {[
-              { title:'⚽ Grupos (cerrado)', items:[
-                { label:'Resultado correcto', pts:'+1 pt', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+4 pts', color:'#fde047' },
-              ]},
-              { title:'🔥 Ronda de 32', items:[
-                { label:'Resultado correcto', pts:'+3 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+9 pts', color:'#fde047' },
-                { label:'Equipo clasificado adivinado', pts:'+2 pts', color:'#c084fc' },
-              ]},
-              { title:'💪 Octavos de final', items:[
-                { label:'Resultado correcto', pts:'+4 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+12 pts', color:'#fde047' },
-              ]},
-              { title:'🏅 Cuartos de final', items:[
-                { label:'Resultado correcto', pts:'+5 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+15 pts', color:'#fde047' },
-              ]},
-              { title:'🏆 Semifinales', items:[
-                { label:'Resultado correcto', pts:'+6 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+18 pts', color:'#fde047' },
-              ]},
-              { title:'🥇 Final', items:[
-                { label:'Resultado correcto', pts:'+7 pts', color:'#4ade80' },
-                { label:'Marcador exacto', pts:'+21 pts', color:'#fde047' },
-              ]},
-              { title:'📊 Clasificados de grupo', items:[
-                { label:'1° y 2° en orden exacto', pts:'+10 pts', color:'#fde047' },
-                { label:'Ambos equipos sin importar orden', pts:'+5 pts', color:'#4ade80' },
-                { label:'Un equipo correcto', pts:'+2 pts', color:'#93c5fd' },
-              ]},
-              { title:'🏆 Campeón del Mundial', items:[
-                { label:'Adivinas el campeón', pts:'+30 pts', color:'#c084fc' },
-              ]},
-            ].map(section=>(
-              <div key={section.title} style={{ marginBottom:'20px' }}>
-                <div style={{ fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.7)', marginBottom:'10px' }}>{section.title}</div>
-                <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
-                  {section.items.map(item=>(
-                    <div key={item.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', borderRadius:'10px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }}>
-                      <span style={{ fontSize:'13px', color:'rgba(255,255,255,0.65)' }}>{item.label}</span>
-                      <span style={{ fontSize:'14px', fontWeight:'800', color:item.color }}>{item.pts}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <div style={{ padding:'14px', borderRadius:'12px', background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.15)', marginBottom:'16px' }}>
-              <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.5)', lineHeight:'1.6' }}>
-                🔒 Los pronósticos cierran <strong style={{color:'white'}}>10 minutos</strong> antes de cada partido.<br/>
-                🔥 Los 16 clasificados se pronostican antes del primer partido de la ronda.<br/>
-                💰 Inscripción: <strong style={{color:'white'}}>$15.000</strong>
-              </div>
-            </div>
-            <button onClick={()=>setShowRules(false)}
-              style={{ width:'100%', padding:'12px', background:'linear-gradient(135deg,#7c3aed,#c026d3)', border:'none', color:'white', fontWeight:'600', fontSize:'14px', borderRadius:'12px', cursor:'pointer' }}>
-              Entendido ✓
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:40, background:'#0f1a0f', borderTop:'1px solid rgba(255,255,255,0.1)' }}>
-        <div style={{ display:'flex', maxWidth:'900px', margin:'0 auto' }}>
-          {bottomTabs.map(tab=>(
-            <button key={tab.id} onClick={()=>setActiveTab(tab.id)}
-              style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', padding:'8px 0', fontSize:'9px', fontWeight:'500', background:'none', border:'none', cursor:'pointer',
-                color:activeTab===tab.id?'#4ade80':'rgba(255,255,255,0.35)' }}>
-              <span style={{ fontSize:'16px', marginBottom:'2px' }}>{tab.emoji}</span>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default App;
+export default Home;
