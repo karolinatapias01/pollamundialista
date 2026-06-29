@@ -29,6 +29,56 @@ const getTeamsByGroup = (group) => {
 const toColDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 const todayCol = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 
+const getPhasePoints = (phase) => {
+  switch(phase) {
+    case 'groups':   return { correct: 1, exact: 4 };
+    case 'round16':  return { correct: 3, exact: 6 };
+    case 'quarters': return { correct: 4, exact: 8 };
+    case 'semis':    return { correct: 5, exact: 10 };
+    case 'third':    return { correct: 6, exact: 12 };
+    case 'final':    return { correct: 7, exact: 14 };
+    default:         return { correct: 1, exact: 4 };
+  }
+};
+
+const calcUserPoints = (user, matches) => {
+  let matchPts = 0, groupPts = 0, round16Pts = 0, championPts = 0;
+
+  const finished = matches.filter(m => m.status === 'finished');
+  finished.forEach(match => {
+    const pred = user.predictions?.[match.id];
+    if (!pred) return;
+    const pts = getPhasePoints(match.phase);
+    const actual = match.homeScore > match.awayScore ? 'home' : match.homeScore < match.awayScore ? 'away' : 'draw';
+    const hasBoth = pred.homeScore !== undefined && pred.awayScore !== undefined;
+    const predicted = pred.result || (hasBoth ? (pred.homeScore > pred.awayScore ? 'home' : pred.homeScore < pred.awayScore ? 'away' : 'draw') : null);
+    const isExact = hasBoth && parseInt(pred.homeScore) === parseInt(match.homeScore) && parseInt(pred.awayScore) === parseInt(match.awayScore);
+    if (isExact) matchPts += pts.exact;
+    else if (predicted === actual) matchPts += pts.correct;
+  });
+
+  const groupPreds = user.groupPredictions || {};
+  const groupResults = user.groupResults || {};
+  Object.entries(groupPreds).forEach(([group, pred]) => {
+    if (!pred?.first || !pred?.second) return;
+    const result = groupResults[group];
+    if (!result) return;
+    if (pred.first === result.first && pred.second === result.second) groupPts += 10;
+    else if ((pred.first === result.first || pred.first === result.second) && (pred.second === result.first || pred.second === result.second)) groupPts += 5;
+    else if (pred.first === result.first || pred.first === result.second || pred.second === result.first || pred.second === result.second) groupPts += 2;
+  });
+
+  const r16Pred = user.round16Prediction || [];
+  const r16Results = user.round16Results || [];
+  if (r16Results.length > 0 && r16Pred.length > 0) {
+    r16Results.forEach(t => { if (r16Pred.includes(t)) round16Pts += 2; });
+  }
+
+  if (user.championCorrect) championPts = 30;
+
+  return { matchPts, groupPts, round16Pts, championPts, total: matchPts + groupPts + round16Pts + championPts };
+};
+
 const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
@@ -45,6 +95,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [round16Sel, setRound16Sel] = useState([]);
   const [round16Saved, setRound16Saved] = useState(false);
   const [savingR16, setSavingR16] = useState(false);
+  const [verifyUser, setVerifyUser] = useState(null);
 
   const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
   const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
@@ -155,6 +206,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         {sectionBtn('groups','Clasificados','📊')}
         {sectionBtn('round16results','16 Clasif.','🔥')}
         {sectionBtn('champion','Campeón','🏆')}
+        {sectionBtn('verify','Verificar','📋')}
         {sectionBtn('users','Usuarios','👥')}
         {sectionBtn('reset','Resetear','🔄')}
       </div>
@@ -387,7 +439,6 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               Confirma los 16 equipos que pasaron la Ronda de 32. Esto suma +2 pts a cada usuario que los haya adivinado.
             </p>
           </div>
-
           {round16Saved ? (
             <div style={{padding:'16px',borderRadius:'12px',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)',textAlign:'center'}}>
               <div style={{fontSize:'32px',marginBottom:'8px'}}>🔥</div>
@@ -402,7 +453,6 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                   Seleccionados: <span style={{color:round16Sel.length===16?'#4ade80':'#fbbf24',fontWeight:'700'}}>{round16Sel.length}/16</span>
                 </div>
               </div>
-
               <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'14px'}}>
                 {ROUND16_TEAMS.map(teamId => {
                   const team = getTeamById(teamId);
@@ -420,12 +470,11 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                   );
                 })}
               </div>
-
               <button
                 disabled={savingR16 || round16Sel.length !== 16}
                 onClick={async()=>{
                   if(round16Sel.length !== 16){ alert('Selecciona exactamente 16 equipos'); return; }
-                  if(!confirm(`¿Confirmas estos 16 equipos como clasificados a Octavos? Esta acción asigna puntos a todos los usuarios.`)) return;
+                  if(!confirm(`¿Confirmas estos 16 equipos como clasificados a Octavos?`)) return;
                   setSavingR16(true);
                   try {
                     await onUpdateRound16Results(round16Sel);
@@ -452,7 +501,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
             <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🏆 Ingresar campeón</h3>
-            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Da +15 pts a quienes adivinaron el campeón</p>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Da +30 pts a quienes adivinaron el campeón</p>
           </div>
           {championSaved ? (
             <div style={{padding:'16px',borderRadius:'12px',background:'rgba(250,204,21,0.1)',border:'1px solid rgba(250,204,21,0.3)',textAlign:'center'}}>
@@ -483,6 +532,101 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                 🏆 Registrar campeón y dar puntos
               </button>
             </>
+          )}
+        </div>
+      )}
+
+      {/* VERIFICAR PUNTOS */}
+      {activeSection==='verify' && (
+        <div style={{...card,padding:'20px'}}>
+          <div style={{marginBottom:'16px'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>📋 Verificar puntos</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Desglose de puntos por usuario</p>
+          </div>
+
+          {verifyUser ? (
+            <div>
+              <button onClick={()=>setVerifyUser(null)}
+                style={{marginBottom:'16px',fontSize:'13px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>
+                ← Volver a la lista
+              </button>
+              {(() => {
+                const u = users.find(x => x.id === verifyUser);
+                if (!u) return null;
+                const pts = calcUserPoints(u, matches);
+                const diff = (u.points||0) - pts.total;
+                return (
+                  <div>
+                    <div style={{padding:'14px',borderRadius:'12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'12px'}}>
+                      <div style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>{u.name}{u.nickname?` "${u.nickname}"`:''}</div>
+                      <div style={{display:'flex',gap:'16px',flexWrap:'wrap',marginTop:'10px'}}>
+                        {[
+                          {label:'Pts en Firebase', val:u.points||0, color:'#fbbf24'},
+                          {label:'Pts calculados', val:pts.total, color:'#4ade80'},
+                          {label:'Diferencia', val:diff, color:diff===0?'#4ade80':'#f87171'},
+                        ].map(s=>(
+                          <div key={s.label} style={{textAlign:'center',padding:'10px 16px',borderRadius:'10px',background:'rgba(255,255,255,0.04)'}}>
+                            <div style={{fontSize:'20px',fontWeight:'800',color:s.color}}>{s.val>0?'+':''}{s.val}</div>
+                            <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                      {[
+                        {label:'⚽ Partidos', val:pts.matchPts, color:'#60a5fa'},
+                        {label:'📊 Grupos', val:pts.groupPts, color:'#4ade80'},
+                        {label:'🔥 16 Clasificados', val:pts.round16Pts, color:'#fbbf24'},
+                        {label:'🏆 Campeón', val:pts.championPts, color:'#c084fc'},
+                      ].map(item=>(
+                        <div key={item.label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',borderRadius:'10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+                          <span style={{fontSize:'13px',color:'rgba(255,255,255,0.7)'}}>{item.label}</span>
+                          <span style={{fontSize:'15px',fontWeight:'700',color:item.color}}>+{item.val}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {diff !== 0 && (
+                      <div style={{marginTop:'12px',padding:'12px',borderRadius:'10px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)'}}>
+                        <div style={{fontSize:'13px',color:'#f87171',fontWeight:'600'}}>⚠️ Hay diferencia de {diff} pts</div>
+                        <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'4px'}}>Para corregir, vuelve a guardar los clasificados de grupos en la sección 📊</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+              {[...users].filter(u=>!u.isAdmin).sort((a,b)=>(b.points||0)-(a.points||0)).map(u => {
+                const pts = calcUserPoints(u, matches);
+                const diff = (u.points||0) - pts.total;
+                const team = getTeamById(u.avatar);
+                return (
+                  <button key={u.id} onClick={()=>setVerifyUser(u.id)}
+                    style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',borderRadius:'12px',cursor:'pointer',textAlign:'left',
+                      background:diff!==0?'rgba(239,68,68,0.06)':'rgba(255,255,255,0.03)',
+                      border:diff!==0?'1px solid rgba(239,68,68,0.2)':'1px solid rgba(255,255,255,0.07)'}}>
+                    {team?.flagCode
+                      ?<img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={28} height={28} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
+                      :<span style={{fontSize:'20px'}}>{u.avatar||'👤'}</span>
+                    }
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:'13px',fontWeight:'600',color:'white'}}>{u.name}{u.nickname?` "${u.nickname}"`:''}</div>
+                      <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>
+                        Firebase: {u.points||0} pts · Calculado: {pts.total} pts
+                      </div>
+                    </div>
+                    <div style={{textAlign:'right'}}>
+                      <div style={{fontSize:'13px',fontWeight:'700',color:diff===0?'#4ade80':'#f87171'}}>
+                        {diff===0?'✓ OK':`⚠️ ${diff>0?'+':''}${diff}`}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
@@ -542,6 +686,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
             <li>• Los pendientes no pueden pronosticar</li>
             <li>• El número rojo en ⏳ indica cuántos esperan aprobación</li>
             <li>• Confirma los 16 clasificados solo cuando terminen todos los partidos de la Ronda de 32</li>
+            <li>• Si hay diferencia en 📋 Verificar, vuelve a guardar los clasificados en 📊</li>
           </ul>
         </div>
       </div>
