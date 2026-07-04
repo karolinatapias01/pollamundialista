@@ -40,6 +40,7 @@ const ALL_GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
 const Home = ({ users, currentUser, matches, onNavigate }) => {
   const [showGroupsDetail, setShowGroupsDetail] = useState(false);
+  const [showR32Detail, setShowR32Detail] = useState(false);
 
   const liveUser = users.find(u => u.id === currentUser.id) || currentUser;
 
@@ -119,6 +120,15 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
     });
     return total;
   }, [liveUser, groupsWithResults]);
+
+  // ✅ Puntos R32 clasificados
+  const r32Results = liveUser.round16Results || [];
+  const r32Pred = liveUser.round16Prediction || [];
+  const hasR32Results = r32Results.length > 0;
+  const myR32Points = useMemo(() => {
+    if (!hasR32Results || r32Pred.length === 0) return 0;
+    return r32Results.filter(t => r32Pred.includes(t)).length * 2;
+  }, [r32Results, r32Pred, hasR32Results]);
 
   const s = (key) => liveUser?.stats?.[key] ?? 0;
 
@@ -254,6 +264,110 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ✅ NUEVO: Banner R32 clasificados */}
+      {hasR32Results && (
+        <div style={{borderRadius:'14px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',overflow:'hidden'}}>
+          <div style={{padding:'14px 16px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontSize:'13px',fontWeight:'700',color:'#fbbf24',marginBottom:'3px'}}>
+                  🔥 Puntos clasificados R32 asignados
+                </div>
+                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)'}}>
+                  {r32Results.length} equipos confirmados · Tú obtuviste{' '}
+                  <span style={{color:'#fbbf24',fontWeight:'700'}}>{myR32Points} pts</span> de clasificados R32
+                  {r32Pred.length > 0 && (
+                    <span style={{color:'rgba(255,255,255,0.35)',marginLeft:'6px'}}>
+                      ({r32Results.filter(t => r32Pred.includes(t)).length}/{r32Results.length} aciertos)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button onClick={()=>setShowR32Detail(!showR32Detail)}
+                style={{padding:'6px 12px',borderRadius:'8px',background:'rgba(251,191,36,0.15)',border:'1px solid rgba(251,191,36,0.3)',color:'#fbbf24',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap',marginLeft:'10px'}}>
+                {showR32Detail ? 'Ocultar' : 'Ver detalle'}
+              </button>
+            </div>
+          </div>
+
+          {showR32Detail && (
+            <div style={{borderTop:'1px solid rgba(251,191,36,0.15)',padding:'12px 16px'}}>
+              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'10px'}}>
+                Tus {r32Pred.length} equipos seleccionados:
+              </div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'14px'}}>
+                {r32Pred.length > 0 ? r32Pred.map(teamId => {
+                  const team = getTeamById(teamId);
+                  const isCorrect = r32Results.includes(teamId);
+                  return (
+                    <div key={teamId} style={{display:'flex',alignItems:'center',gap:'4px',padding:'5px 10px',borderRadius:'8px',
+                      background:isCorrect?'rgba(74,222,128,0.15)':'rgba(239,68,68,0.1)',
+                      border:isCorrect?'1px solid rgba(74,222,128,0.3)':'1px solid rgba(239,68,68,0.2)'}}>
+                      <Flag code={team?.flagCode} size={16}/>
+                      <span style={{fontSize:'11px',color:isCorrect?'#4ade80':'#f87171'}}>{team?.name||teamId}</span>
+                      <span style={{fontSize:'10px'}}>{isCorrect?'✓':'✗'}</span>
+                    </div>
+                  );
+                }) : <span style={{fontSize:'12px',color:'rgba(255,255,255,0.3)'}}>No pronosticaste</span>}
+              </div>
+
+              {/* Pronósticos de todos */}
+              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'10px',fontWeight:'600',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                👥 Pronósticos de todos
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                {[...users].filter(u=>u.round16Prediction?.length>0).sort((a,b)=>{
+                  const ptsA = (a.round16Results||r32Results).filter(t=>(a.round16Prediction||[]).includes(t)).length*2;
+                  const ptsB = (b.round16Results||r32Results).filter(t=>(b.round16Prediction||[]).includes(t)).length*2;
+                  return ptsB - ptsA;
+                }).map(u => {
+                  const pred = u.round16Prediction || [];
+                  const aciertos = r32Results.filter(t => pred.includes(t)).length;
+                  const pts = aciertos * 2;
+                  const team = getTeamById(u.avatar);
+                  const isMe = u.id === currentUser.id;
+                  return (
+                    <div key={u.id} style={{padding:'10px 12px',borderRadius:'10px',
+                      background:isMe?'rgba(251,191,36,0.08)':'rgba(255,255,255,0.03)',
+                      border:isMe?'1px solid rgba(251,191,36,0.2)':'1px solid rgba(255,255,255,0.06)'}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'8px'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                          {team?.flagCode
+                            ?<img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={20} height={20} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
+                            :<span style={{fontSize:'16px'}}>{u.avatar||'👤'}</span>
+                          }
+                          <span style={{fontSize:'13px',fontWeight:'600',color:isMe?'#fbbf24':'rgba(255,255,255,0.85)'}}>
+                            {u.name}{u.nickname&&u.nickname!==u.name?` (${u.nickname})`:''}
+                            {isMe&&<span style={{fontSize:'10px',color:'#fbbf24',marginLeft:'4px'}}>tú</span>}
+                          </span>
+                        </div>
+                        <span style={{fontSize:'13px',fontWeight:'700',color:pts>0?'#4ade80':'rgba(255,255,255,0.3)'}}>
+                          {aciertos}/{r32Results.length} · +{pts} pts
+                        </span>
+                      </div>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:'4px'}}>
+                        {pred.map(teamId => {
+                          const t = getTeamById(teamId);
+                          const ok = r32Results.includes(teamId);
+                          return (
+                            <div key={teamId} style={{display:'flex',alignItems:'center',gap:'3px',padding:'3px 7px',borderRadius:'6px',
+                              background:ok?'rgba(74,222,128,0.12)':'rgba(239,68,68,0.08)',
+                              border:ok?'1px solid rgba(74,222,128,0.25)':'1px solid rgba(239,68,68,0.15)'}}>
+                              <Flag code={t?.flagCode} size={12}/>
+                              <span style={{fontSize:'10px',color:ok?'#4ade80':'#f87171'}}>{t?.name||teamId}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
