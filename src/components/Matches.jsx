@@ -223,8 +223,10 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     }
   };
 
-  const handleSaveQuarters = async () => {
-    if (quartersSel.length !== 8) { alert(`Selecciona exactamente 8 equipos (tienes ${quartersSel.length})`); return; }
+const handleSaveQuarters = async () => {
+    const _avail = QUARTERS_TEAMS.filter(t => !blockedQuartersTeams.has(t));
+    const _req = Math.min(8, _avail.length);
+    if (quartersSel.length !== _req) { alert(`Selecciona exactamente ${_req} equipos (tienes ${quartersSel.length})`); return; }
     setSavingQrt(true);
     try {
       await onSaveQuartersPrediction(currentUser.id, quartersSel);
@@ -525,11 +527,11 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
                   );
                 })}
               </div>
-              <button onClick={handleSaveQuarters} disabled={savingQrt||quartersSel.length!==8}
-                style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',cursor:quartersSel.length===8?'pointer':'default',border:'none',
-                  background:quartersSel.length===8?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
-                  color:quartersSel.length===8?'white':'rgba(255,255,255,0.3)'}}>
-                {savingQrt?'⏳ Guardando...':quartersSel.length===8?'Guardar mis 8 clasificados':'Selecciona 8 equipos'}
+             <button onClick={handleSaveQuarters} disabled={savingQrt||quartersSel.length!==Math.min(8,QUARTERS_TEAMS.filter(t=>!blockedQuartersTeams.has(t)).length)}
+                style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',cursor:quartersSel.length===Math.min(8,QUARTERS_TEAMS.filter(t=>!blockedQuartersTeams.has(t)).length)?'pointer':'default',border:'none',
+                  background:quartersSel.length===Math.min(8,QUARTERS_TEAMS.filter(t=>!blockedQuartersTeams.has(t)).length)?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
+                  color:quartersSel.length===Math.min(8,QUARTERS_TEAMS.filter(t=>!blockedQuartersTeams.has(t)).length)?'white':'rgba(255,255,255,0.3)'}}>
+                {savingQrt?'⏳ Guardando...':quartersSel.length===Math.min(8,QUARTERS_TEAMS.filter(t=>!blockedQuartersTeams.has(t)).length)?'Guardar mis 8 clasificados':'Selecciona '+Math.min(8,QUARTERS_TEAMS.filter(t=>!blockedQuartersTeams.has(t)).length)+' equipos'}
               </button>
             </div>
           ) : !quartersIsOpen && !hasQuartersPred ? (
