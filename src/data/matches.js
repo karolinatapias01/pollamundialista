@@ -118,14 +118,14 @@ export const matches = [
   { id: 88,  phase: 'round16', homeTeam: null, awayTeam: null, date: '2026-07-03T20:00:00-05:00', venue: 'Dallas',        status: 'pending' },
 
   // ── OCTAVOS ──
-  { id: 89,  phase: 'quarters', homeTeam: null, awayTeam: null, date: '2026-07-04T14:00:00-05:00', venue: 'Filadelfia',   status: 'pending' },
-  { id: 90,  phase: 'quarters', homeTeam: null, awayTeam: null, date: '2026-07-04T19:00:00-05:00', venue: 'Houston',      status: 'pending' },
-  { id: 91,  phase: 'quarters', homeTeam: null, awayTeam: null, date: '2026-07-05T14:00:00-05:00', venue: 'Nueva York',   status: 'pending' },
-  { id: 92,  phase: 'quarters', homeTeam: null, awayTeam: null, date: '2026-07-05T19:00:00-05:00', venue: 'Ciudad de México', status: 'pending' },
-  { id: 93,  phase: 'quarters', homeTeam: null, awayTeam: null, date: '2026-07-06T14:00:00-05:00', venue: 'Dallas',       status: 'pending' },
-  { id: 94,  phase: 'quarters', homeTeam: null, awayTeam: null, date: '2026-07-06T19:00:00-05:00', venue: 'Seattle',      status: 'pending' },
-  { id: 95,  phase: 'quarters', homeTeam: null, awayTeam: null, date: '2026-07-07T14:00:00-05:00', venue: 'Atlanta',      status: 'pending' },
-  { id: 96,  phase: 'quarters', homeTeam: null, awayTeam: null, date: '2026-07-07T19:00:00-05:00', venue: 'Vancouver',    status: 'pending' },
+  { id: 89,  phase: 'quarters', homeTeam: 'can', awayTeam: 'mar', date: '2026-07-04T17:00:00Z', venue: 'Houston',   status: 'pending' },
+  { id: 90,  phase: 'quarters', homeTeam: 'par', awayTeam: 'fra', date: '2026-07-04T19:00:00-05:00', venue: 'Houston',      status: 'pending' },
+  { id: 91,  phase: 'quarters', homeTeam: 'bra', awayTeam: 'nor', date: '2026-07-05T14:00:00-05:00', venue: 'Nueva York',   status: 'pending' },
+  { id: 92,  phase: 'quarters', homeTeam: 'mex', awayTeam: 'eng', date: '2026-07-05T19:00:00-05:00', venue: 'Ciudad de México', status: 'pending' },
+  { id: 93,  phase: 'quarters', homeTeam: 'por', awayTeam: 'esp', date: '2026-07-06T14:00:00-05:00', venue: 'Dallas',       status: 'pending' },
+  { id: 94,  phase: 'quarters', homeTeam: 'usa', awayTeam: 'bel', date: '2026-07-06T19:00:00-05:00', venue: 'Seattle',      status: 'pending' },
+  { id: 95,  phase: 'quarters', homeTeam: 'arg', awayTeam: 'egy', date: '2026-07-07T14:00:00-05:00', venue: 'Atlanta',      status: 'pending' },
+  { id: 96,  phase: 'quarters', homeTeam: 'sui', awayTeam: 'col', date: '2026-07-07T19:00:00-05:00', venue: 'Vancouver',    status: 'pending' },
 
   // ── CUARTOS ──
   { id: 97,  phase: 'semis', homeTeam: null, awayTeam: null, date: '2026-07-09T19:00:00-05:00', venue: 'Boston',        status: 'pending' },
