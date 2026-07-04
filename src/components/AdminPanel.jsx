@@ -19,6 +19,11 @@ const ROUND16_TEAMS = [
   'sui','alg','col','gha','aus','egy','por','cro'
 ];
 
+const QUARTERS_TEAMS = [
+  'can','mar','par','fra','bra','nor','mex','eng',
+  'por','esp','usa','bel','arg','egy','sui','col'
+];
+
 const getTeamsByGroup = (group) => {
   const gMatches = allMatches.filter(m => m.phase==='groups' && m.group===group);
   const ids = new Set();
@@ -42,7 +47,7 @@ const getPhasePoints = (phase) => {
 };
 
 const calcUserPoints = (user, matches) => {
-  let matchPts = 0, groupPts = 0, round16Pts = 0, championPts = 0;
+  let matchPts = 0, groupPts = 0, round16Pts = 0, quartersPts = 0, championPts = 0;
 
   const finished = matches.filter(m => m.status === 'finished');
   finished.forEach(match => {
@@ -74,12 +79,18 @@ const calcUserPoints = (user, matches) => {
     r16Results.forEach(t => { if (r16Pred.includes(t)) round16Pts += 2; });
   }
 
+  const qPred = user.quartersPrediction || [];
+  const qResults = user.quartersResults || [];
+  if (qResults.length > 0 && qPred.length > 0) {
+    qResults.forEach(t => { if (qPred.includes(t)) quartersPts += 2; });
+  }
+
   if (user.championCorrect) championPts = 30;
 
-  return { matchPts, groupPts, round16Pts, championPts, total: matchPts + groupPts + round16Pts + championPts };
+  return { matchPts, groupPts, round16Pts, quartersPts, championPts, total: matchPts + groupPts + round16Pts + quartersPts + championPts };
 };
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onRecalculateAll, onOpenRound16, onCloseRound16, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onUpdateQuartersResults, onRecalculateAll, onOpenRound16, onCloseRound16, onOpenQuarters, onCloseQuarters, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
@@ -96,6 +107,9 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [round16Sel, setRound16Sel] = useState([]);
   const [round16Saved, setRound16Saved] = useState(false);
   const [savingR16, setSavingR16] = useState(false);
+  const [quartersSel2, setQuartersSel2] = useState([]);
+  const [quartersSaved, setQuartersSaved] = useState(false);
+  const [savingQrt2, setSavingQrt2] = useState(false);
   const [verifyUser, setVerifyUser] = useState(null);
   const [recalculating, setRecalculating] = useState(false);
 
@@ -207,6 +221,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         {sectionBtn('opengroups','Grupos','🔓')}
         {sectionBtn('groups','Clasificados','📊')}
         {sectionBtn('round16results','16 Clasif.','🔥')}
+        {sectionBtn('quartersresults','8 Clasif.','💪')}
         {sectionBtn('champion','Campeón','🏆')}
         {sectionBtn('verify','Verificar','📋')}
         {sectionBtn('users','Usuarios','👥')}
@@ -337,18 +352,12 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         </>
       )}
 
-      {/* ABRIR/CERRAR GRUPOS Y R32 */}
+      {/* ABRIR/CERRAR GRUPOS, R32 Y OCTAVOS */}
       {activeSection==='opengroups' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
             <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔓 Pronósticos de grupos</h3>
             <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Abre todos los grupos para que todos puedan pronosticar igualmente</p>
-          </div>
-          <div style={{padding:'14px',borderRadius:'12px',background:'rgba(74,222,128,0.06)',border:'1px solid rgba(74,222,128,0.15)',marginBottom:'16px'}}>
-            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.5)',lineHeight:'1.6'}}>
-              🔓 <strong style={{color:'white'}}>Abrir:</strong> Todos pueden pronosticar grupos<br/>
-              🔒 <strong style={{color:'white'}}>Cerrar:</strong> Se bloquean los pronósticos de grupos
-            </div>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:'10px',marginBottom:'24px'}}>
             <button disabled={loadingGroups}
@@ -357,7 +366,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                 setLoadingGroups(true);
                 await onOpenAllGroups();
                 setLoadingGroups(false);
-                alert('✓ Grupos abiertos. Avísales a todos que pronostiquen.');
+                alert('✓ Grupos abiertos.');
               }}
               style={{width:'100%',padding:'14px',background:loadingGroups?'rgba(255,255,255,0.06)':'rgba(74,222,128,0.15)',border:'1px solid rgba(74,222,128,0.4)',color:'#4ade80',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingGroups?'default':'pointer'}}>
               {loadingGroups?'⏳ Procesando...':'🔓 Abrir todos los grupos'}
@@ -376,10 +385,10 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
           </div>
 
           {/* R32 */}
-          <div style={{paddingTop:'16px',borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+          <div style={{paddingTop:'16px',borderTop:'1px solid rgba(255,255,255,0.08)',marginBottom:'24px'}}>
             <h3 style={{fontSize:'15px',fontWeight:'700',color:'#fbbf24',marginBottom:'4px'}}>🔥 Pronóstico 16 clasificados R32</h3>
             <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginBottom:'14px'}}>
-              Abre para que los que no alcanzaron puedan pronosticar. Los equipos que ya jugaron aparecerán bloqueados.
+              Abre para que los que no alcanzaron puedan pronosticar.
             </p>
             <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
               <button disabled={loadingRound16}
@@ -388,7 +397,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                   setLoadingRound16(true);
                   await onOpenRound16();
                   setLoadingRound16(false);
-                  alert('✓ Pronóstico de 16 clasificados abierto. Avísales a todos.');
+                  alert('✓ Pronóstico R32 abierto.');
                 }}
                 style={{width:'100%',padding:'14px',background:loadingRound16?'rgba(255,255,255,0.06)':'rgba(251,191,36,0.15)',border:'1px solid rgba(251,191,36,0.4)',color:'#fbbf24',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingRound16?'default':'pointer'}}>
                 {loadingRound16?'⏳ Procesando...':'🔓 Abrir pronóstico R32'}
@@ -399,10 +408,42 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                   setLoadingRound16(true);
                   await onCloseRound16();
                   setLoadingRound16(false);
-                  alert('✓ Pronóstico de 16 clasificados cerrado.');
+                  alert('✓ Pronóstico R32 cerrado.');
                 }}
                 style={{width:'100%',padding:'14px',background:loadingRound16?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingRound16?'default':'pointer'}}>
                 {loadingRound16?'⏳ Procesando...':'🔒 Cerrar pronóstico R32'}
+              </button>
+            </div>
+          </div>
+
+          {/* OCTAVOS */}
+          <div style={{paddingTop:'16px',borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'#93c5fd',marginBottom:'4px'}}>💪 Pronóstico 8 clasificados Octavos</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginBottom:'14px'}}>
+              Abre para que todos puedan pronosticar quiénes pasan a cuartos de final.
+            </p>
+            <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+              <button disabled={loadingRound16}
+                onClick={async()=>{
+                  if(!confirm('¿Abrir pronóstico de 8 clasificados a cuartos?')) return;
+                  setLoadingRound16(true);
+                  await onOpenQuarters();
+                  setLoadingRound16(false);
+                  alert('✓ Pronóstico Octavos abierto.');
+                }}
+                style={{width:'100%',padding:'14px',background:loadingRound16?'rgba(255,255,255,0.06)':'rgba(96,165,250,0.15)',border:'1px solid rgba(96,165,250,0.4)',color:'#93c5fd',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingRound16?'default':'pointer'}}>
+                {loadingRound16?'⏳ Procesando...':'🔓 Abrir pronóstico Octavos'}
+              </button>
+              <button disabled={loadingRound16}
+                onClick={async()=>{
+                  if(!confirm('¿Cerrar pronóstico de 8 clasificados a cuartos?')) return;
+                  setLoadingRound16(true);
+                  await onCloseQuarters();
+                  setLoadingRound16(false);
+                  alert('✓ Pronóstico Octavos cerrado.');
+                }}
+                style={{width:'100%',padding:'14px',background:loadingRound16?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingRound16?'default':'pointer'}}>
+                {loadingRound16?'⏳ Procesando...':'🔒 Cerrar pronóstico Octavos'}
               </button>
             </div>
           </div>
@@ -470,14 +511,14 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
           <div style={{marginBottom:'16px'}}>
             <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔥 16 clasificados a Octavos</h3>
             <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>
-              Confirma los 16 equipos que pasaron la Ronda de 32. Esto suma +2 pts a cada usuario que los haya adivinado.
+              Confirma los 16 equipos que pasaron la Ronda de 32. Suma +2 pts por cada acierto.
             </p>
           </div>
           {round16Saved ? (
             <div style={{padding:'16px',borderRadius:'12px',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)',textAlign:'center'}}>
               <div style={{fontSize:'32px',marginBottom:'8px'}}>🔥</div>
               <div style={{fontSize:'14px',fontWeight:'700',color:'#fbbf24'}}>¡16 clasificados registrados!</div>
-              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'6px'}}>Los puntos ya fueron asignados a todos los usuarios</div>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'6px'}}>Los puntos ya fueron asignados</div>
             </div>
           ) : (
             <>
@@ -508,12 +549,12 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                 disabled={savingR16 || round16Sel.length !== 16}
                 onClick={async()=>{
                   if(round16Sel.length !== 16){ alert('Selecciona exactamente 16 equipos'); return; }
-                  if(!confirm(`¿Confirmas estos 16 equipos como clasificados a Octavos?`)) return;
+                  if(!confirm('¿Confirmas estos 16 equipos como clasificados a Octavos?')) return;
                   setSavingR16(true);
                   try {
                     await onUpdateRound16Results(round16Sel);
                     setRound16Saved(true);
-                    alert('✅ ¡Listo! Los puntos fueron asignados a todos.');
+                    alert('✅ ¡Listo! Los puntos fueron asignados.');
                   } catch(e) {
                     alert('Error al guardar. Intente de nuevo.');
                   } finally {
@@ -523,7 +564,79 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                 style={{width:'100%',padding:'14px',borderRadius:'10px',fontWeight:'700',fontSize:'14px',cursor:round16Sel.length===16?'pointer':'default',border:'none',
                   background:round16Sel.length===16?'linear-gradient(135deg,#d97706,#f59e0b)':'rgba(255,255,255,0.06)',
                   color:round16Sel.length===16?'white':'rgba(255,255,255,0.3)'}}>
-                {savingR16?'⏳ Asignando puntos...':round16Sel.length===16?'🔥 Confirmar 16 clasificados y asignar puntos':'Selecciona 16 equipos'}
+                {savingR16?'⏳ Asignando puntos...':round16Sel.length===16?'🔥 Confirmar 16 clasificados':'Selecciona 16 equipos'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ✅ NUEVO: 8 CLASIFICADOS OCTAVOS */}
+      {activeSection==='quartersresults' && (
+        <div style={{...card,padding:'20px'}}>
+          <div style={{marginBottom:'16px'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>💪 8 clasificados a Cuartos</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>
+              Confirma los 8 equipos que pasaron Octavos. Suma +2 pts por cada acierto.
+            </p>
+          </div>
+          {quartersSaved ? (
+            <div style={{padding:'16px',borderRadius:'12px',background:'rgba(96,165,250,0.1)',border:'1px solid rgba(96,165,250,0.3)',textAlign:'center'}}>
+              <div style={{fontSize:'32px',marginBottom:'8px'}}>💪</div>
+              <div style={{fontSize:'14px',fontWeight:'700',color:'#93c5fd'}}>¡8 clasificados registrados!</div>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'6px'}}>Los puntos ya fueron asignados</div>
+            </div>
+          ) : (
+            <>
+              <div style={{padding:'12px',borderRadius:'10px',background:'rgba(96,165,250,0.06)',border:'1px solid rgba(96,165,250,0.15)',marginBottom:'14px'}}>
+                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',lineHeight:'1.6'}}>
+                  ⚠️ <strong style={{color:'white'}}>Solo hazlo una vez</strong> cuando terminen todos los partidos de Octavos.<br/>
+                  Seleccionados: <span style={{color:quartersSel2.length===8?'#4ade80':'#93c5fd',fontWeight:'700'}}>{quartersSel2.length}/8</span>
+                </div>
+              </div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'14px'}}>
+                {QUARTERS_TEAMS.map(teamId => {
+                  const team = getTeamById(teamId);
+                  const isSelected = quartersSel2.includes(teamId);
+                  return (
+                    <button key={teamId} onClick={()=>{
+                      setQuartersSel2(prev => {
+                        if (prev.includes(teamId)) return prev.filter(t=>t!==teamId);
+                        if (prev.length >= 8) { alert('Ya seleccionaste 8 equipos'); return prev; }
+                        return [...prev, teamId];
+                      });
+                    }}
+                      style={{display:'flex',alignItems:'center',gap:'6px',padding:'7px 12px',borderRadius:'8px',cursor:'pointer',
+                        background:isSelected?'rgba(96,165,250,0.15)':'rgba(255,255,255,0.04)',
+                        border:isSelected?'1px solid rgba(96,165,250,0.4)':'1px solid rgba(255,255,255,0.08)',
+                        color:isSelected?'#93c5fd':'rgba(255,255,255,0.6)'}}>
+                      <Flag code={team?.flagCode} size={20}/>
+                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400'}}>{team?.name||teamId}</span>
+                      {isSelected && <span style={{fontSize:'11px'}}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                disabled={savingQrt2 || quartersSel2.length !== 8}
+                onClick={async()=>{
+                  if(quartersSel2.length !== 8){ alert('Selecciona exactamente 8 equipos'); return; }
+                  if(!confirm('¿Confirmas estos 8 equipos como clasificados a Cuartos?')) return;
+                  setSavingQrt2(true);
+                  try {
+                    await onUpdateQuartersResults(quartersSel2);
+                    setQuartersSaved(true);
+                    alert('✅ ¡Listo! Los puntos fueron asignados.');
+                  } catch(e) {
+                    alert('Error al guardar. Intente de nuevo.');
+                  } finally {
+                    setSavingQrt2(false);
+                  }
+                }}
+                style={{width:'100%',padding:'14px',borderRadius:'10px',fontWeight:'700',fontSize:'14px',cursor:quartersSel2.length===8?'pointer':'default',border:'none',
+                  background:quartersSel2.length===8?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
+                  color:quartersSel2.length===8?'white':'rgba(255,255,255,0.3)'}}>
+                {savingQrt2?'⏳ Asignando puntos...':quartersSel2.length===8?'💪 Confirmar 8 clasificados':'Selecciona 8 equipos'}
               </button>
             </>
           )}
@@ -581,18 +694,18 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
           {!verifyUser && (
             <div style={{marginBottom:'16px',padding:'14px',borderRadius:'12px',background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.2)'}}>
               <div style={{fontSize:'13px',color:'rgba(255,255,255,0.5)',marginBottom:'10px'}}>
-                Recalcula los puntos de todos los usuarios con las reglas actuales. No borra pronósticos ni resultados.
+                Recalcula los puntos de todos los usuarios con las reglas actuales.
               </div>
               <button
                 disabled={recalculating}
                 onClick={async()=>{
-                  if(!confirm('¿Recalcular puntos de todos los usuarios? Esto puede tomar unos segundos.')) return;
+                  if(!confirm('¿Recalcular puntos de todos los usuarios?')) return;
                   setRecalculating(true);
                   try {
                     await onRecalculateAll();
-                    alert('✅ ¡Listo! Puntos recalculados para todos los usuarios.');
+                    alert('✅ ¡Listo! Puntos recalculados.');
                   } catch(e) {
-                    alert('Error al recalcular. Intente de nuevo.');
+                    alert('Error al recalcular.');
                   } finally {
                     setRecalculating(false);
                   }
@@ -635,7 +748,8 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                       {[
                         {label:'⚽ Partidos', val:pts.matchPts, color:'#60a5fa'},
                         {label:'📊 Grupos', val:pts.groupPts, color:'#4ade80'},
-                        {label:'🔥 16 Clasificados', val:pts.round16Pts, color:'#fbbf24'},
+                        {label:'🔥 16 Clasificados R32', val:pts.round16Pts, color:'#fbbf24'},
+                        {label:'💪 8 Clasificados Octavos', val:pts.quartersPts, color:'#93c5fd'},
                         {label:'🏆 Campeón', val:pts.championPts, color:'#c084fc'},
                       ].map(item=>(
                         <div key={item.label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',borderRadius:'10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
@@ -707,17 +821,14 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
             <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>🔄 Resetear todo</h3>
-            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Borra pronósticos y puntos. Los usuarios y campeón pronosticado se mantienen.</p>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>Borra pronósticos y puntos.</p>
           </div>
           <div style={{padding:'16px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',marginBottom:'16px'}}>
             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.6)',lineHeight:'1.8'}}>
               ✓ Puntos → 0<br/>
-              ✓ Pronósticos de partidos → borrados<br/>
-              ✓ Pronósticos de grupos → borrados<br/>
-              ✓ Pronóstico 16 clasificados → borrado<br/>
-              ✓ Resultados de partidos → pendientes<br/>
-              ✗ Usuarios → se mantienen<br/>
-              ✗ Campeón pronosticado → se mantiene
+              ✓ Pronósticos → borrados<br/>
+              ✓ Clasificados → borrados<br/>
+              ✗ Usuarios → se mantienen
             </div>
           </div>
           <button disabled={resetting}
@@ -730,7 +841,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               alert('✓ Todo reseteado.');
             }}
             style={{width:'100%',padding:'14px',background:resetting?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.2)',border:'1px solid rgba(239,68,68,0.4)',color:resetting?'rgba(255,255,255,0.3)':'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:resetting?'default':'pointer'}}>
-            {resetting?'⏳ Reseteando...':'🔄 Resetear todo y empezar de cero'}
+            {resetting?'⏳ Reseteando...':'🔄 Resetear todo'}
           </button>
         </div>
       )}
@@ -740,10 +851,9 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
           <AlertCircle size={15} style={{color:'#93c5fd',flexShrink:0,marginTop:'1px'}}/>
           <ul style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',lineHeight:'1.8',listStyle:'none'}}>
             <li>• Aprueba solo usuarios que hayan pagado $15.000</li>
-            <li>• Los pendientes no pueden pronosticar</li>
-            <li>• El número rojo en ⏳ indica cuántos esperan aprobación</li>
-            <li>• Confirma los 16 clasificados solo cuando terminen todos los partidos de la Ronda de 32</li>
-            <li>• Use 🔄 Recalcular en 📋 Verificar si hay diferencias en los puntos</li>
+            <li>• Confirma los 16 clasificados solo cuando terminen todos los partidos de R32</li>
+            <li>• Confirma los 8 clasificados solo cuando terminen todos los partidos de Octavos</li>
+            <li>• Use 🔄 Recalcular en 📋 Verificar si hay diferencias</li>
           </ul>
         </div>
       </div>

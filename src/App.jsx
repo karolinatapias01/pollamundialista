@@ -79,10 +79,12 @@ function App() {
   const {
     currentUser, users, matches, reactions, loading,
     setCurrentUser, registerUser, makePrediction,
-    saveGroupPrediction, saveRound16Prediction,
-    updateMatchResult, updateRound16Results,
+    saveGroupPrediction, saveRound16Prediction, saveQuartersPrediction,
+    updateMatchResult, updateRound16Results, updateQuartersResults,
     updateGroupResult, updateChampion,
     recalculateAllPoints,
+    openRound16Predictions, closeRound16Predictions,
+    openQuartersPredictions, closeQuartersPredictions,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
     openAllGroups, closeAllGroups, groupsForceOpen
@@ -259,13 +261,13 @@ function App() {
 
       <main style={{ maxWidth:'900px', margin:'0 auto', padding:'16px 16px 100px' }}>
         {activeTab==='home'    && <Home users={users} currentUser={currentUser} matches={matches} onNavigate={handleNavigate}/>}
-        {activeTab==='matches' && <Matches key={matchesPhase} matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} onSaveRound16Prediction={saveRound16Prediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users} initialPhase={matchesPhase}/>}
+        {activeTab==='matches' && <Matches key={matchesPhase} matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} onSaveRound16Prediction={saveRound16Prediction} onSaveQuartersPrediction={saveQuartersPrediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users} initialPhase={matchesPhase}/>}
         {activeTab==='groups'  && <Groups currentUser={currentUser} onSaveGroupPrediction={saveGroupPrediction} users={users} matches={matches} groupsForceOpen={groupsForceOpen}/>}
         {activeTab==='results' && <Results matches={matches} currentUser={currentUser} users={users}/>}
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
         {activeTab==='news'    && <News/>}
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} onRecalculateAll={recalculateAllPoints} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups}/>}
+        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} onUpdateQuartersResults={updateQuartersResults} onRecalculateAll={recalculateAllPoints} onOpenRound16={openRound16Predictions} onCloseRound16={closeRound16Predictions} onOpenQuarters={openQuartersPredictions} onCloseQuarters={closeQuartersPredictions} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups}/>}
       </main>
 
       <button onClick={()=>setShowRules(true)}
@@ -281,40 +283,41 @@ function App() {
             <div style={{ width:'40px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.2)', margin:'0 auto 20px' }}/>
             <h2 style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'20px', textAlign:'center' }}>📋 Reglas y Puntos</h2>
             {[
-  { title:'⚽ Grupos (cerrado)', items:[
-    { label:'Resultado correcto', pts:'+1 pt', color:'#4ade80' },
-    { label:'Marcador exacto (+3 extra)', pts:'+4 pts total', color:'#fde047' },
-  ]},
-  { title:'🔥 Ronda de 32', items:[
-    { label:'Resultado correcto', pts:'+3 pts', color:'#4ade80' },
-    { label:'Marcador exacto (+6 extra)', pts:'+9 pts total', color:'#fde047' },
-    { label:'Equipo clasificado adivinado', pts:'+2 pts', color:'#c084fc' },
-  ]},
-  { title:'💪 Octavos de final', items:[
-    { label:'Resultado correcto', pts:'+4 pts', color:'#4ade80' },
-    { label:'Marcador exacto (+8 extra)', pts:'+12 pts total', color:'#fde047' },
-  ]},
-  { title:'🏅 Semis y Cuartos', items:[
-    { label:'Resultado correcto', pts:'+5 pts', color:'#4ade80' },
-    { label:'Marcador exacto (+10 extra)', pts:'+15 pts total', color:'#fde047' },
-  ]},
-  { title:'🥉 3er puesto', items:[
-    { label:'Resultado correcto', pts:'+6 pts', color:'#4ade80' },
-    { label:'Marcador exacto (+12 extra)', pts:'+18 pts total', color:'#fde047' },
-  ]},
-  { title:'🥇 Final', items:[
-    { label:'Resultado correcto', pts:'+7 pts', color:'#4ade80' },
-    { label:'Marcador exacto (+14 extra)', pts:'+21 pts total', color:'#fde047' },
-  ]},
-  { title:'📊 Clasificados de grupo', items:[
-    { label:'1° y 2° en orden exacto', pts:'+10 pts', color:'#fde047' },
-    { label:'Ambos equipos sin importar orden', pts:'+5 pts', color:'#4ade80' },
-    { label:'Un equipo correcto', pts:'+2 pts', color:'#93c5fd' },
-  ]},
-  { title:'🏆 Campeón del Mundial', items:[
-    { label:'Adivinas el campeón', pts:'+30 pts', color:'#c084fc' },
-  ]},
-].map(section=>(
+              { title:'⚽ Grupos (cerrado)', items:[
+                { label:'Resultado correcto', pts:'+1 pt', color:'#4ade80' },
+                { label:'Marcador exacto (+3 extra)', pts:'+4 pts total', color:'#fde047' },
+              ]},
+              { title:'🔥 Ronda de 32', items:[
+                { label:'Resultado correcto', pts:'+3 pts', color:'#4ade80' },
+                { label:'Marcador exacto (+6 extra)', pts:'+9 pts total', color:'#fde047' },
+                { label:'Equipo clasificado adivinado', pts:'+2 pts', color:'#c084fc' },
+              ]},
+              { title:'💪 Octavos de final', items:[
+                { label:'Resultado correcto', pts:'+4 pts', color:'#4ade80' },
+                { label:'Marcador exacto (+8 extra)', pts:'+12 pts total', color:'#fde047' },
+                { label:'Equipo clasificado adivinado', pts:'+2 pts', color:'#c084fc' },
+              ]},
+              { title:'🏅 Semis y Cuartos', items:[
+                { label:'Resultado correcto', pts:'+5 pts', color:'#4ade80' },
+                { label:'Marcador exacto (+10 extra)', pts:'+15 pts total', color:'#fde047' },
+              ]},
+              { title:'🥉 3er puesto', items:[
+                { label:'Resultado correcto', pts:'+6 pts', color:'#4ade80' },
+                { label:'Marcador exacto (+12 extra)', pts:'+18 pts total', color:'#fde047' },
+              ]},
+              { title:'🥇 Final', items:[
+                { label:'Resultado correcto', pts:'+7 pts', color:'#4ade80' },
+                { label:'Marcador exacto (+14 extra)', pts:'+21 pts total', color:'#fde047' },
+              ]},
+              { title:'📊 Clasificados de grupo', items:[
+                { label:'1° y 2° en orden exacto', pts:'+10 pts', color:'#fde047' },
+                { label:'Ambos equipos sin importar orden', pts:'+5 pts', color:'#4ade80' },
+                { label:'Un equipo correcto', pts:'+2 pts', color:'#93c5fd' },
+              ]},
+              { title:'🏆 Campeón del Mundial', items:[
+                { label:'Adivinas el campeón', pts:'+30 pts', color:'#c084fc' },
+              ]},
+            ].map(section=>(
               <div key={section.title} style={{ marginBottom:'20px' }}>
                 <div style={{ fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.7)', marginBottom:'10px' }}>{section.title}</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
@@ -330,7 +333,7 @@ function App() {
             <div style={{ padding:'14px', borderRadius:'12px', background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.15)', marginBottom:'16px' }}>
               <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.5)', lineHeight:'1.6' }}>
                 🔒 Los pronósticos cierran <strong style={{color:'white'}}>10 minutos</strong> antes de cada partido.<br/>
-                🔥 Los 16 clasificados se pronostican antes del primer partido de la ronda.<br/>
+                🔥 Los clasificados se pronostican antes del primer partido de cada ronda.<br/>
                 💰 Inscripción: <strong style={{color:'white'}}>$15.000</strong>
               </div>
             </div>
