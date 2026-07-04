@@ -205,7 +205,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     if (blockedQuartersTeams.has(teamId)) return;
     setQuartersSel(prev => {
       if (prev.includes(teamId)) return prev.filter(t => t !== teamId);
-      if (prev.length >= 8) { alert('Ya seleccionaste 8 equipos'); return prev; }
+      if (prev.length >= 99) { alert('Ya seleccionaste 8 equipos'); return prev; }
       return [...prev, teamId];
     });
   };
@@ -528,7 +528,7 @@ const handleSaveQuarters = async () => {
                   );
                 })}
               </div>
-             <button onClick={handleSaveQuarters} disabled={savingQrt||quartersSel.length!==reqQuarters}
+             <button onClick={handleSaveQuarters} disabled={savingQrt||quartersSel.length===0}
                 style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',cursor:quartersSel.length===reqQuarters?'pointer':'default',border:'none',
                   background:quartersSel.length===reqQuarters?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
                   color:quartersSel.length===reqQuarters?'white':'rgba(255,255,255,0.3)'}}>
