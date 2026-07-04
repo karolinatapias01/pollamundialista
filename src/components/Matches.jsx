@@ -529,9 +529,9 @@ const handleSaveQuarters = async () => {
                 })}
               </div>
              <button onClick={handleSaveQuarters} disabled={savingQrt||quartersSel.length===0}
-                style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',cursor:quartersSel.length===reqQuarters?'pointer':'default',border:'none',
-                  background:quartersSel.length===reqQuarters?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
-                  color:quartersSel.length===reqQuarters?'white':'rgba(255,255,255,0.3)'}}>
+                style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',cursor:quartersSel.length>0?'pointer':'default',border:'none',
+                  background:quartersSel.length>0?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
+                  color:quartersSel.length>0?'white':'rgba(255,255,255,0.3)'}}>
                 {savingQrt?'⏳ Guardando...':quartersSel.length===reqQuarters?'Guardar mis 8 clasificados':'Selecciona '+reqQuarters+' equipos'}
               </button>
             </div>
