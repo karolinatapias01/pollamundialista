@@ -227,7 +227,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
 const handleSaveQuarters = async () => {
     const _avail = QUARTERS_TEAMS.filter(t => !blockedQuartersTeams.has(t));
     const _req = _avail.length;
-    if (quartersSel.length !== _req) { alert(`Selecciona exactamente ${_req} equipos (tienes ${quartersSel.length})`); return; }
+    if (false) { alert(`Selecciona exactamente ${_req} equipos (tienes ${quartersSel.length})`); return; }
     setSavingQrt(true);
     try {
       await onSaveQuartersPrediction(currentUser.id, quartersSel);
