@@ -77,7 +77,13 @@ const ROUND16_TEAMS = [
   'sui','alg','col','gha','aus','egy','por','cro'
 ];
 
-const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Prediction, reactions, onAddReaction, onRemoveReaction, users, initialPhase }) => {
+// ✅ Los 16 equipos que juegan octavos
+const QUARTERS_TEAMS = [
+  'can','mar','par','fra','bra','nor','mex','eng',
+  'por','esp','usa','bel','arg','egy','sui','col'
+];
+
+const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Prediction, onSaveQuartersPrediction, reactions, onAddReaction, onRemoveReaction, users, initialPhase }) => {
   const [selectedPhase, setSelectedPhase] = useState(() => {
     if (initialPhase && initialPhase !== 'groups') return initialPhase;
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
@@ -96,16 +102,27 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
   const [round16Sel,    setRound16Sel]    = useState([]);
   const [savingR16,     setSavingR16]     = useState(false);
   const [round16ForceOpen, setRound16ForceOpen] = useState(false);
+  const [quartersSel,   setQuartersSel]   = useState([]);
+  const [savingQrt,     setSavingQrt]     = useState(false);
+  const [quartersForceOpen, setQuartersForceOpen] = useState(false);
 
   useEffect(() => {
     if (initialPhase) setSelectedPhase(initialPhase);
   }, [initialPhase]);
 
-  // ✅ Leer si el admin abrió manualmente el pronóstico de 16 clasificados
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'round16'), (snap) => {
       if (snap.exists()) setRound16ForceOpen(snap.data().forceOpen || false);
       else setRound16ForceOpen(false);
+    });
+    return unsub;
+  }, []);
+
+  // ✅ Leer si el admin abrió el pronóstico de cuartos
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'quarters'), (snap) => {
+      if (snap.exists()) setQuartersForceOpen(snap.data().forceOpen || false);
+      else setQuartersForceOpen(false);
     });
     return unsub;
   }, []);
@@ -125,11 +142,28 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
       .sort((a,b) => new Date(a.date) - new Date(b.date))[0];
   }, [matches]);
 
-  // ✅ Equipos bloqueados: los que ya tienen partido finalizado en R32
+  const firstQuartersMatch = useMemo(() => {
+    return matches
+      .filter(m => m.phase === 'quarters' && m.homeTeam && m.awayTeam)
+      .sort((a,b) => new Date(a.date) - new Date(b.date))[0];
+  }, [matches]);
+
   const blockedTeams = useMemo(() => {
     const blocked = new Set();
     matches
       .filter(m => m.phase === 'round16' && m.status === 'finished')
+      .forEach(m => {
+        if (m.homeTeam) blocked.add(m.homeTeam);
+        if (m.awayTeam) blocked.add(m.awayTeam);
+      });
+    return blocked;
+  }, [matches]);
+
+  // ✅ Equipos bloqueados en octavos (ya jugaron)
+  const blockedQuartersTeams = useMemo(() => {
+    const blocked = new Set();
+    matches
+      .filter(m => m.phase === 'quarters' && m.status === 'finished')
       .forEach(m => {
         if (m.homeTeam) blocked.add(m.homeTeam);
         if (m.awayTeam) blocked.add(m.awayTeam);
@@ -143,15 +177,34 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     return new Date() < new Date(firstRound16Match.date);
   }, [firstRound16Match, round16ForceOpen]);
 
+  const quartersIsOpen = useMemo(() => {
+    if (quartersForceOpen) return true;
+    if (!firstQuartersMatch) return false;
+    return new Date() < new Date(firstQuartersMatch.date);
+  }, [firstQuartersMatch, quartersForceOpen]);
+
   const myRound16Pred = currentUser.round16Prediction || [];
   const round16Results = currentUser.round16Results || [];
   const hasRound16Pred = myRound16Pred.length > 0;
+
+  const myQuartersPred = currentUser.quartersPrediction || [];
+  const quartersResults = currentUser.quartersResults || [];
+  const hasQuartersPred = myQuartersPred.length > 0;
 
   const toggleRound16Team = (teamId) => {
     if (blockedTeams.has(teamId)) return;
     setRound16Sel(prev => {
       if (prev.includes(teamId)) return prev.filter(t => t !== teamId);
       if (prev.length >= 16) { alert('Ya seleccionaste 16 equipos'); return prev; }
+      return [...prev, teamId];
+    });
+  };
+
+  const toggleQuartersTeam = (teamId) => {
+    if (blockedQuartersTeams.has(teamId)) return;
+    setQuartersSel(prev => {
+      if (prev.includes(teamId)) return prev.filter(t => t !== teamId);
+      if (prev.length >= 8) { alert('Ya seleccionaste 8 equipos'); return prev; }
       return [...prev, teamId];
     });
   };
@@ -167,6 +220,20 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
       alert('Error al guardar. Intente de nuevo.');
     } finally {
       setSavingR16(false);
+    }
+  };
+
+  const handleSaveQuarters = async () => {
+    if (quartersSel.length !== 8) { alert(`Selecciona exactamente 8 equipos (tienes ${quartersSel.length})`); return; }
+    setSavingQrt(true);
+    try {
+      await onSaveQuartersPrediction(currentUser.id, quartersSel);
+      setQuartersSel([]);
+      alert('✅ Pronóstico de clasificados a cuartos guardado');
+    } catch(e) {
+      alert('Error al guardar. Intente de nuevo.');
+    } finally {
+      setSavingQrt(false);
     }
   };
 
@@ -267,6 +334,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
         </div>
       </div>
 
+      {/* SECCIÓN R32 CLASIFICADOS */}
       {selectedPhase==='round16' && (
         <div style={{...card,padding:'16px 18px',marginBottom:'12px',borderColor:'rgba(251,191,36,0.2)',background:'rgba(251,191,36,0.04)'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
@@ -364,6 +432,109 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
           ) : !round16IsOpen && !hasRound16Pred ? (
             <div style={{textAlign:'center',padding:'12px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>
               🔒 El tiempo para pronosticar los clasificados ya cerró
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* ✅ NUEVO: SECCIÓN OCTAVOS CLASIFICADOS A CUARTOS */}
+      {selectedPhase==='quarters' && (
+        <div style={{...card,padding:'16px 18px',marginBottom:'12px',borderColor:'rgba(96,165,250,0.2)',background:'rgba(96,165,250,0.04)'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
+            <div>
+              <div style={{fontSize:'14px',fontWeight:'700',color:'#93c5fd',marginBottom:'2px'}}>
+                🎯 ¿Quiénes clasifican a Cuartos?
+              </div>
+              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>
+                Escoge 8 equipos · +2 pts por cada acierto · Máx +16 pts
+              </div>
+            </div>
+            {hasQuartersPred && quartersResults.length > 0 && (
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:'13px',fontWeight:'800',color:'#4ade80'}}>
+                  +{quartersResults.filter(t => myQuartersPred.includes(t)).length * 2} pts
+                </div>
+                <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)'}}>
+                  {quartersResults.filter(t => myQuartersPred.includes(t)).length}/8 aciertos
+                </div>
+              </div>
+            )}
+          </div>
+
+          {hasQuartersPred && quartersSel.length === 0 ? (
+            <div>
+              <div style={{padding:'10px 12px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',marginBottom:'10px'}}>
+                <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'8px'}}>✓ Tus 8 equipos seleccionados:</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
+                  {myQuartersPred.map(teamId => {
+                    const team = getTeamById(teamId);
+                    const isCorrect = quartersResults.includes(teamId);
+                    const resultsIn = quartersResults.length > 0;
+                    return (
+                      <div key={teamId} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'8px',
+                        background:resultsIn?(isCorrect?'rgba(74,222,128,0.15)':'rgba(239,68,68,0.1)'):'rgba(255,255,255,0.06)',
+                        border:resultsIn?(isCorrect?'1px solid rgba(74,222,128,0.3)':'1px solid rgba(239,68,68,0.2)'):'1px solid rgba(255,255,255,0.1)'}}>
+                        <Flag code={team?.flagCode} size={16}/>
+                        <span style={{fontSize:'11px',color:resultsIn?(isCorrect?'#4ade80':'#f87171'):'rgba(255,255,255,0.7)'}}>
+                          {team?.name||teamId}
+                        </span>
+                        {resultsIn && <span style={{fontSize:'10px'}}>{isCorrect?'✓':'✗'}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {quartersIsOpen && (
+                <button onClick={()=>setQuartersSel([...myQuartersPred])}
+                  style={{fontSize:'12px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>
+                  Modificar selección
+                </button>
+              )}
+            </div>
+          ) : quartersIsOpen && isApproved ? (
+            <div>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'6px'}}>
+                Seleccionados: <span style={{color:quartersSel.length===8?'#4ade80':'#93c5fd',fontWeight:'700'}}>{quartersSel.length}/8</span>
+              </div>
+              {blockedQuartersTeams.size > 0 && (
+                <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginBottom:'10px'}}>
+                  🔒 Los equipos en gris ya jugaron — no se pueden seleccionar
+                </div>
+              )}
+              <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'12px'}}>
+                {QUARTERS_TEAMS.map(teamId => {
+                  const team = getTeamById(teamId);
+                  const isSelected = quartersSel.includes(teamId);
+                  const isBlocked = blockedQuartersTeams.has(teamId);
+                  return (
+                    <button key={teamId} onClick={()=>toggleQuartersTeam(teamId)}
+                      disabled={isBlocked}
+                      style={{display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',borderRadius:'8px',
+                        cursor:isBlocked?'not-allowed':'pointer',
+                        opacity:isBlocked?0.35:1,
+                        background:isBlocked?'rgba(255,255,255,0.02)':isSelected?'rgba(96,165,250,0.15)':'rgba(255,255,255,0.04)',
+                        border:isBlocked?'1px solid rgba(255,255,255,0.05)':isSelected?'1px solid rgba(96,165,250,0.4)':'1px solid rgba(255,255,255,0.08)',
+                        color:isBlocked?'rgba(255,255,255,0.3)':isSelected?'#93c5fd':'rgba(255,255,255,0.6)'}}>
+                      <Flag code={team?.flagCode} size={18}/>
+                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400',textDecoration:isBlocked?'line-through':'none'}}>
+                        {team?.name||teamId}
+                      </span>
+                      {isSelected && !isBlocked && <span style={{fontSize:'10px'}}>✓</span>}
+                      {isBlocked && <span style={{fontSize:'10px'}}>🔒</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={handleSaveQuarters} disabled={savingQrt||quartersSel.length!==8}
+                style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',cursor:quartersSel.length===8?'pointer':'default',border:'none',
+                  background:quartersSel.length===8?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
+                  color:quartersSel.length===8?'white':'rgba(255,255,255,0.3)'}}>
+                {savingQrt?'⏳ Guardando...':quartersSel.length===8?'Guardar mis 8 clasificados':'Selecciona 8 equipos'}
+              </button>
+            </div>
+          ) : !quartersIsOpen && !hasQuartersPred ? (
+            <div style={{textAlign:'center',padding:'12px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>
+              🔒 El tiempo para pronosticar los clasificados a cuartos ya cerró
             </div>
           ) : null}
         </div>
