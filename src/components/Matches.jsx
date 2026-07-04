@@ -448,7 +448,7 @@ const handleSaveQuarters = async () => {
                 🎯 ¿Quiénes clasifican a Cuartos?
               </div>
               <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>
-                Escoge 8 equipos · +2 pts por cada acierto · Máx +16 pts
+                Escoge hasta 8 equipos · +2 pts por cada acierto · Máx +16 pts
               </div>
             </div>
             {hasQuartersPred && quartersResults.length > 0 && (
