@@ -262,7 +262,7 @@ const useAppState = () => {
     const semisResults = user.semisResults || [];
     if (semisResults.length > 0 && semisPred.length > 0) {
       semisResults.forEach(teamId => {
-        if (semisPred.includes(teamId)) totalPoints += 4;
+        if (semisPred.includes(teamId)) totalPoints += 5;
       });
     }
 
