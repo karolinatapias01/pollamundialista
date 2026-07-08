@@ -93,6 +93,7 @@ const useAppState = () => {
       groupPredictions: {},
       round16Prediction: [],
       quartersPrediction: [],
+      semisPrediction: [],
       approved: users.length === 0,
       stats: {
         correctPredictions: 0,
@@ -151,7 +152,6 @@ const useAppState = () => {
     await updateDoc(userRef, { round16Prediction: teamIds });
   };
 
-  // ✅ NUEVO: Guardar pronóstico 8 clasificados a cuartos
   const saveQuartersPrediction = async (userId, teamIds) => {
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
@@ -159,6 +159,16 @@ const useAppState = () => {
     const user = userSnap.data();
     if (!user.approved && !user.isAdmin) throw new Error('Usuario no aprobado');
     await updateDoc(userRef, { quartersPrediction: teamIds });
+  };
+
+  // ✅ NUEVO: Guardar pronóstico 4 clasificados a semis
+  const saveSemisPrediction = async (userId, teamIds) => {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return;
+    const user = userSnap.data();
+    if (!user.approved && !user.isAdmin) throw new Error('Usuario no aprobado');
+    await updateDoc(userRef, { semisPrediction: teamIds });
   };
 
   const saveGroupPrediction = async (userId, group, first, second) => {
@@ -239,12 +249,20 @@ const useAppState = () => {
       });
     }
 
-    // ✅ NUEVO: Puntos clasificados cuartos (+2 por cada acierto)
     const quartersPred = user.quartersPrediction || [];
     const quartersResults = user.quartersResults || [];
     if (quartersResults.length > 0 && quartersPred.length > 0) {
       quartersResults.forEach(teamId => {
         if (quartersPred.includes(teamId)) totalPoints += 2;
+      });
+    }
+
+    // ✅ NUEVO: Puntos clasificados semis (+4 por cada acierto)
+    const semisPred = user.semisPrediction || [];
+    const semisResults = user.semisResults || [];
+    if (semisResults.length > 0 && semisPred.length > 0) {
+      semisResults.forEach(teamId => {
+        if (semisPred.includes(teamId)) totalPoints += 4;
       });
     }
 
@@ -297,7 +315,6 @@ const useAppState = () => {
     }
   };
 
-  // ✅ NUEVO: Confirmar 8 clasificados a cuartos y asignar puntos
   const updateQuartersResults = async (teamIds) => {
     const usersSnap = await getDocs(collection(db, 'users'));
     const matchesSnap = await getDocs(collection(db, 'matches'));
@@ -307,6 +324,22 @@ const useAppState = () => {
       const updated = recalculateUserPoints(user, freshMatches);
       await updateDoc(doc(db, 'users', userDoc.id), {
         quartersResults: teamIds,
+        points: updated.points,
+        stats: updated.stats
+      });
+    }
+  };
+
+  // ✅ NUEVO: Confirmar 4 clasificados a semis y asignar puntos
+  const updateSemisResults = async (teamIds) => {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    const matchesSnap = await getDocs(collection(db, 'matches'));
+    const freshMatches = matchesSnap.docs.map(d => ({ ...d.data(), id: parseInt(d.id) }));
+    for (const userDoc of usersSnap.docs) {
+      const user = { ...userDoc.data(), semisResults: teamIds };
+      const updated = recalculateUserPoints(user, freshMatches);
+      await updateDoc(doc(db, 'users', userDoc.id), {
+        semisResults: teamIds,
         points: updated.points,
         stats: updated.stats
       });
@@ -367,13 +400,21 @@ const useAppState = () => {
     await setDoc(doc(db, 'settings', 'round16'), { forceOpen: false });
   };
 
-  // ✅ NUEVO: Abrir/cerrar pronóstico cuartos
   const openQuartersPredictions = async () => {
     await setDoc(doc(db, 'settings', 'quarters'), { forceOpen: true });
   };
 
   const closeQuartersPredictions = async () => {
     await setDoc(doc(db, 'settings', 'quarters'), { forceOpen: false });
+  };
+
+  // ✅ NUEVO: Abrir/cerrar pronóstico semis
+  const openSemisPredictions = async () => {
+    await setDoc(doc(db, 'settings', 'semis'), { forceOpen: true });
+  };
+
+  const closeSemisPredictions = async () => {
+    await setDoc(doc(db, 'settings', 'semis'), { forceOpen: false });
   };
 
   const deleteUser = async (userId) => {
@@ -391,6 +432,8 @@ const useAppState = () => {
         round16Results: [],
         quartersPrediction: [],
         quartersResults: [],
+        semisPrediction: [],
+        semisResults: [],
         championCorrect: false,
         groupResults: {},
         stats: {
@@ -440,12 +483,13 @@ const useAppState = () => {
   return {
     users, currentUser, matches, reactions, loading,
     setCurrentUser, registerUser, makePrediction,
-    saveGroupPrediction, saveRound16Prediction, saveQuartersPrediction,
-    updateMatchResult, updateRound16Results, updateQuartersResults,
+    saveGroupPrediction, saveRound16Prediction, saveQuartersPrediction, saveSemisPrediction,
+    updateMatchResult, updateRound16Results, updateQuartersResults, updateSemisResults,
     updateGroupResult, updateChampion,
     recalculateAllPoints,
     openRound16Predictions, closeRound16Predictions,
     openQuartersPredictions, closeQuartersPredictions,
+    openSemisPredictions, closeSemisPredictions,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
     openAllGroups, closeAllGroups, groupsForceOpen
