@@ -1,0 +1,104 @@
+const card = { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'16px' };
+    case 'third':    return { correct: 6, exact: 18 };
+  const inputStyle = { width:'56px',textAlign:'center',fontSize:'22px',fontWeight:'700',padding:'8px',borderRadius:'10px',background:'rgba(255,255,255,0.08)',border:'2px solid rgba(168,85,247,0.4)',color:'white',outline:'none' };
+      style={{padding:'8px 14px', borderRadius:'10px', fontSize:'13px', fontWeight:'500', cursor:'pointer', position:'relative', whiteSpace:'nowrap',
+        background: activeSection===id ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
+        border: activeSection===id ? '1px solid rgba(168,85,247,0.4)' : '1px solid rgba(255,255,255,0.08)',
+        color: activeSection===id ? '#c084fc' : 'rgba(255,255,255,0.5)'}}>
+        <span style={{position:'absolute',top:'-6px',right:'-6px',background:'#ef4444',color:'white',borderRadius:'50%',width:'18px',height:'18px',fontSize:'11px',fontWeight:'700',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{marginLeft:'8px',color:'#fde047'}}>
+              style={{padding:'8px 12px',borderRadius:'10px',background:'rgba(22,163,74,0.15)',border:'1px solid rgba(22,163,74,0.3)',color:'#4ade80',cursor:'pointer',display:'flex',alignItems:'center',gap:'5px',fontSize:'13px',fontWeight:'500'}}>
+              style={{padding:'8px 12px',borderRadius:'10px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.25)',color:'#f87171',cursor:'pointer',display:'flex',alignItems:'center',gap:'5px',fontSize:'13px',fontWeight:'500'}}>
+        <h2 style={{fontSize:'17px',fontWeight:'800',color:'white',marginBottom:'4px'}}>👑 Panel de administración</h2>
+      <div style={{...card,padding:'12px 14px',display:'flex',gap:'8px',overflowX:'auto'}}>
+        {sectionBtn('groups','Clasificados','📊')}
+        {sectionBtn('round16results','16 Clasif.','🔥')}
+        {sectionBtn('quartersresults','8 Clasif.','💪')}
+            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                style={{padding:'6px 10px',borderRadius:'8px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:prevDay?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.2)',cursor:prevDay?'pointer':'default'}}>
+                style={{padding:'6px 10px',borderRadius:'8px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:nextDay?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.2)',cursor:nextDay?'pointer':'default'}}>
+                    background:d===effectiveDate?'rgba(168,85,247,0.2)':'rgba(255,255,255,0.04)',
+                    border:d===effectiveDate?'1px solid rgba(168,85,247,0.4)':'1px solid rgba(255,255,255,0.08)',
+                    color:d===effectiveDate?'#c084fc':d===todayCol()?'#fbbf24':'rgba(255,255,255,0.45)'}}>
+                <div key={match.id} style={{...card,padding:'16px 18px',borderLeft:`3px solid ${isFinished?'#16a34a':'#f97316'}`}}>
+                      <span style={{fontSize:'11px',padding:'2px 8px',borderRadius:'6px',background:isFinished?'rgba(22,163,74,0.12)':'rgba(249,115,22,0.12)',color:isFinished?'#4ade80':'#fb923c',border:`1px solid ${isFinished?'rgba(22,163,74,0.25)':'rgba(249,115,22,0.25)'}`}}>
+                      <span style={{fontSize:'11px',padding:'2px 8px',borderRadius:'6px',background:'rgba(59,130,246,0.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,0.2)'}}>
+                      <div style={{fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.8)'}}>{homeTeam?.name||'TBD'}</div>
+                        <div style={{display:'flex',alignItems:'center',gap:'8px',justifyContent:'center'}}>
+                        <div style={{fontSize:'26px',fontWeight:'800',color:isFinished?'white':'rgba(255,255,255,0.2)',letterSpacing:'-1px'}}>
+                      <div style={{fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.8)'}}>{awayTeam?.name||'TBD'}</div>
+                  <div style={{display:'flex',gap:'8px'}}>
+                          style={{flex:1,padding:'10px',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'white',fontWeight:'600',fontSize:'14px',borderRadius:'10px',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}>
+                        style={{flex:1,padding:'10px',background:'rgba(124,58,237,0.15)',border:'1px solid rgba(124,58,237,0.3)',color:'#c084fc',fontWeight:'600',fontSize:'14px',borderRadius:'10px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}>
+              style={{width:'100%',padding:'14px',background:loadingGroups?'rgba(255,255,255,0.06)':'rgba(74,222,128,0.15)',border:'1px solid rgba(74,222,128,0.4)',color:'#4ade80',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingGroups?'default':'pointer'}}>
+              style={{width:'100%',padding:'14px',background:loadingGroups?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingGroups?'default':'pointer'}}>
+          <div style={{paddingTop:'16px',borderTop:'1px solid rgba(255,255,255,0.08)',marginBottom:'24px'}}>
+                style={{width:'100%',padding:'14px',background:loadingRound16?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingRound16?'default':'pointer'}}>
+          <div style={{paddingTop:'16px',borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'#93c5fd',marginBottom:'4px'}}>💪 Pronóstico 8 clasificados Octavos</h3>
+                  if(!confirm('¿Abrir pronóstico de 8 clasificados a cuartos?')) return;
+                  if(!confirm('¿Cerrar pronóstico de 8 clasificados a cuartos?')) return;
+                style={{width:'100%',padding:'14px',background:loadingRound16?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:loadingRound16?'default':'pointer'}}>
+                style={{width:'36px',height:'36px',borderRadius:'8px',fontSize:'12px',fontWeight:'600',cursor:'pointer',
+                  background:selectedGroup===g?'rgba(168,85,247,0.2)':'rgba(255,255,255,0.04)',
+                  border:selectedGroup===g?'1px solid rgba(168,85,247,0.4)':'1px solid rgba(255,255,255,0.08)',
+                  color:selectedGroup===g?'#c084fc':'rgba(255,255,255,0.5)'}}>
+              <div style={{fontSize:'12px',color:pos==='first'?'#4ade80':'#93c5fd',fontWeight:'600',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                {pos==='first'?'1° Clasificado':'2° Clasificado'}
+                      style={{display:'flex',alignItems:'center',gap:'10px',padding:'8px 12px',borderRadius:'10px',cursor:'pointer',
+                        background:isSelected?pos==='first'?'rgba(74,222,128,0.15)':'rgba(59,130,246,0.15)':'rgba(255,255,255,0.03)',
+                        border:isSelected?pos==='first'?'1px solid rgba(74,222,128,0.4)':'1px solid rgba(59,130,246,0.4)':'1px solid rgba(255,255,255,0.06)'}}>
+                      <span style={{fontSize:'13px',color:isSelected?pos==='first'?'#4ade80':'#93c5fd':'rgba(255,255,255,0.7)'}}>{team.name}</span>
+            alert(`✓ Clasificados del Grupo ${selectedGroup} guardados.`);
+            style={{width:'100%',padding:'12px',background:groupFirst&&groupSecond?'linear-gradient(135deg,#7c3aed,#c026d3)':'rgba(255,255,255,0.06)',border:'none',color:groupFirst&&groupSecond?'white':'rgba(255,255,255,0.3)',fontWeight:'600',fontSize:'14px',borderRadius:'10px',cursor:'pointer',marginTop:'8px'}}>
+              <div style={{fontSize:'32px',marginBottom:'8px'}}>🔥</div>
+                  Seleccionados: <span style={{color:round16Sel.length===16?'#4ade80':'#fbbf24',fontWeight:'700'}}>{round16Sel.length}/16</span>
+                      style={{display:'flex',alignItems:'center',gap:'6px',padding:'7px 12px',borderRadius:'8px',cursor:'pointer',
+                        background:isSelected?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)',
+                        border:isSelected?'1px solid rgba(74,222,128,0.4)':'1px solid rgba(255,255,255,0.08)',
+                        color:isSelected?'#4ade80':'rgba(255,255,255,0.6)'}}>
+      {/* ✅ NUEVO: 8 CLASIFICADOS OCTAVOS */}
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>💪 8 clasificados a Cuartos</h3>
+              Confirma los 8 equipos que pasaron Octavos. Suma +2 pts por cada acierto.
+              <div style={{fontSize:'32px',marginBottom:'8px'}}>💪</div>
+              <div style={{fontSize:'14px',fontWeight:'700',color:'#93c5fd'}}>¡8 clasificados registrados!</div>
+                  Seleccionados: <span style={{color:quartersSel2.length===8?'#4ade80':'#93c5fd',fontWeight:'700'}}>{quartersSel2.length}/8</span>
+                        if (prev.length >= 8) { alert('Ya seleccionaste 8 equipos'); return prev; }
+                      style={{display:'flex',alignItems:'center',gap:'6px',padding:'7px 12px',borderRadius:'8px',cursor:'pointer',
+                        border:isSelected?'1px solid rgba(96,165,250,0.4)':'1px solid rgba(255,255,255,0.08)',
+                disabled={savingQrt2 || quartersSel2.length !== 8}
+                  if(quartersSel2.length !== 8){ alert('Selecciona exactamente 8 equipos'); return; }
+                  if(!confirm('¿Confirmas estos 8 equipos como clasificados a Cuartos?')) return;
+                style={{width:'100%',padding:'14px',borderRadius:'10px',fontWeight:'700',fontSize:'14px',cursor:quartersSel2.length===8?'pointer':'default',border:'none',
+                  background:quartersSel2.length===8?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
+                  color:quartersSel2.length===8?'white':'rgba(255,255,255,0.3)'}}>
+                {savingQrt2?'⏳ Asignando puntos...':quartersSel2.length===8?'💪 Confirmar 8 clasificados':'Selecciona 8 equipos'}
+              <div style={{fontSize:'32px',marginBottom:'8px'}}>🏆</div>
+                    <Flag code={team.flagCode} size={28}/>
+                    <span style={{fontSize:'13px',fontWeight:'500',color:championId===team.id?'#fde047':'rgba(255,255,255,0.8)'}}>{team.name}</span>
+                    {championId===team.id&&<span style={{marginLeft:'auto',fontSize:'18px'}}>🏆</span>}
+                style={{width:'100%',padding:'12px',background:recalculating?'rgba(255,255,255,0.06)':'linear-gradient(135deg,#3b82f6,#2563eb)',border:'none',color:recalculating?'rgba(255,255,255,0.3)':'white',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:recalculating?'default':'pointer'}}>
+                    <div style={{padding:'14px',borderRadius:'12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'12px'}}>
+                          {label:'Pts calculados', val:pts.total, color:'#4ade80'},
+                          {label:'Diferencia', val:diff, color:diff===0?'#4ade80':'#f87171'},
+                            <div style={{fontSize:'20px',fontWeight:'800',color:s.color}}>{s.val>0?'+':''}{s.val}</div>
+                    <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                        {label:'📊 Grupos', val:pts.groupPts, color:'#4ade80'},
+                        {label:'🔥 16 Clasificados R32', val:pts.round16Pts, color:'#fbbf24'},
+                        {label:'💪 8 Clasificados Octavos', val:pts.quartersPts, color:'#93c5fd'},
+                        {label:'🏆 Campeón', val:pts.championPts, color:'#c084fc'},
+                      <div style={{marginTop:'12px',padding:'12px',borderRadius:'10px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)'}}>
+                        <div style={{fontSize:'13px',color:'#f87171',fontWeight:'600'}}>⚠️ Hay diferencia de {diff} pts</div>
+            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                      background:diff!==0?'rgba(239,68,68,0.06)':'rgba(255,255,255,0.03)',
+                      border:diff!==0?'1px solid rgba(239,68,68,0.2)':'1px solid rgba(255,255,255,0.07)'}}>
+                      ?<img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={28} height={28} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
+                      <div style={{fontSize:'13px',fontWeight:'700',color:diff===0?'#4ade80':'#f87171'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+          <div style={{padding:'16px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',marginBottom:'16px'}}>
+            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.6)',lineHeight:'1.8'}}>
+              ✓ Clasificados → borrados<br/>
+            style={{width:'100%',padding:'14px',background:resetting?'rgba(255,255,255,0.06)':'rgba(239,68,68,0.2)',border:'1px solid rgba(239,68,68,0.4)',color:resetting?'rgba(255,255,255,0.3)':'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:resetting?'default':'pointer'}}>
+        <div style={{display:'flex',gap:'8px',alignItems:'flex-start'}}>
+          <ul style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',lineHeight:'1.8',listStyle:'none'}}>
+            <li>• Confirma los 8 clasificados solo cuando terminen todos los partidos de Octavos</li>

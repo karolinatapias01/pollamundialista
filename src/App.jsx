@@ -79,7 +79,7 @@ function App() {
   const {
     currentUser, users, matches, reactions, loading,
     setCurrentUser, registerUser, makePrediction,
-    saveGroupPrediction, saveRound16Prediction, saveQuartersPrediction,
+    saveGroupPrediction, saveRound16Prediction, saveQuartersPrediction, saveSemisPrediction,
     updateMatchResult, updateRound16Results, updateQuartersResults,
     updateGroupResult, updateChampion,
     recalculateAllPoints,
@@ -261,7 +261,7 @@ function App() {
 
       <main style={{ maxWidth:'900px', margin:'0 auto', padding:'16px 16px 100px' }}>
         {activeTab==='home'    && <Home users={users} currentUser={currentUser} matches={matches} onNavigate={handleNavigate}/>}
-        {activeTab==='matches' && <Matches key={matchesPhase} matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} onSaveRound16Prediction={saveRound16Prediction} onSaveQuartersPrediction={saveQuartersPrediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users} initialPhase={matchesPhase}/>}
+       {activeTab==='matches' && <Matches key={matchesPhase} matches={matches} currentUser={currentUser} onMakePrediction={makePrediction} onSaveRound16Prediction={saveRound16Prediction} onSaveQuartersPrediction={saveQuartersPrediction} onSaveSemisPrediction={saveSemisPrediction} reactions={reactions} onAddReaction={addReaction} onRemoveReaction={removeReaction} users={users} initialPhase={matchesPhase}/>}
         {activeTab==='groups'  && <Groups currentUser={currentUser} onSaveGroupPrediction={saveGroupPrediction} users={users} matches={matches} groupsForceOpen={groupsForceOpen}/>}
         {activeTab==='results' && <Results matches={matches} currentUser={currentUser} users={users}/>}
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
