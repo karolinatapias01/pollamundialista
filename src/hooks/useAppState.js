@@ -163,12 +163,7 @@ const useAppState = () => {
 
   // ✅ NUEVO: Guardar pronóstico 4 clasificados a semis
   const saveSemisPrediction = async (userId, teamIds) => {
-    const userRef = doc(db, 'users', userId);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return;
-    const user = userSnap.data();
-    if (!user.approved && !user.isAdmin) throw new Error('Usuario no aprobado');
-    await updateDoc(userRef, { semisPrediction: teamIds });
+    await updateDoc(doc(db, 'users', userId), { semisPrediction: teamIds });
   };
 
   const saveGroupPrediction = async (userId, group, first, second) => {
