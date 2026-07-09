@@ -246,7 +246,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
   const quartersResults = currentUser.quartersResults || [];
   const hasQuartersPred = myQuartersPred.length > 0;
 
-  const mySemisPred = currentUser.semisPrediction || [];
+  const mySemisPred = currentUser.quartersPrediction || [];
   const semisResults = currentUser.semisResults || [];
   const hasSemisPred = mySemisPred.length > 0 || semisSaved;
 
@@ -311,7 +311,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     if (semisSel.length === 0) { alert('Selecciona al menos 1 equipo'); return; }
     setSavingSemis(true);
     try {
-      console.log("GUARDANDO:",currentUser.id, semisSel); await onSaveSemisPrediction(currentUser.id, semisSel);
+      console.log("GUARDANDO:",currentUser.id, semisSel); await onSaveQuartersPrediction(currentUser.id, semisSel);
       setSemisSaved(true);
       setSemisSel([]);
       alert('✅ Pronóstico de clasificados a semis guardado');
