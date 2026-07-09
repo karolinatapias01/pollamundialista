@@ -111,6 +111,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
   const [quartersForceOpen, setQuartersForceOpen] = useState(false);
   const [semisSel,      setSemisSel]      = useState([]);
   const [savingSemis,   setSavingSemis]   = useState(false);
+  const [semisSaved,    setSemisSaved]    = useState(false);
   const [semisForceOpen, setSemisForceOpen] = useState(false);
 
   useEffect(() => {
@@ -247,7 +248,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
 
   const mySemisPred = currentUser.semisPrediction || [];
   const semisResults = currentUser.semisResults || [];
-  const hasSemisPred = mySemisPred.length > 0;
+  const hasSemisPred = mySemisPred.length > 0 || semisSaved;
 
   const toggleRound16Team = (teamId) => {
     if (blockedTeams.has(teamId)) return;
