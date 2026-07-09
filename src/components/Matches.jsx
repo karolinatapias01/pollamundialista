@@ -285,7 +285,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
       setRound16Sel([]);
       alert('✅ Pronóstico de clasificados guardado');
     } catch(e) {
-      alert('Error al guardar. Intente de nuevo.');
+      alert('Error: '+e.message);
     } finally {
       setSavingR16(false);
     }
