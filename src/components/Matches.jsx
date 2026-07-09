@@ -311,7 +311,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     if (semisSel.length === 0) { alert('Selecciona al menos 1 equipo'); return; }
     setSavingSemis(true);
     try {
-      await onSaveSemisPrediction(currentUser.id, semisSel);
+      console.log("GUARDANDO:",currentUser.id, semisSel); await onSaveSemisPrediction(currentUser.id, semisSel);
       setSemisSel([]);
       alert('✅ Pronóstico de clasificados a semis guardado');
     } catch(e) {
