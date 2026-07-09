@@ -82,12 +82,12 @@ const QUARTERS_TEAMS = [
   'por','esp','usa','bel','arg','egy','sui','col'
 ];
 
-// ✅ 8 equipos que juegan cuartos de final
+// 8 equipos que juegan cuartos de final (phase: semis en Firebase)
 const SEMIS_TEAMS = [
   'fra','mar','esp','bel','nor','eng','arg','sui'
 ];
 
-const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Prediction, onSaveQuartersPrediction, onSaveQuartersPrediction: onSaveSemisPrediction, reactions, onAddReaction, onRemoveReaction, users, initialPhase }) => {
+const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Prediction, onSaveQuartersPrediction, onSaveSemisPrediction, reactions, onAddReaction, onRemoveReaction, users, initialPhase }) => {
   const [selectedPhase, setSelectedPhase] = useState(() => {
     if (initialPhase && initialPhase !== 'groups') return initialPhase;
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
@@ -141,82 +141,50 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     return unsub;
   }, []);
 
- const phases = [
-  { id:'groups',   label:'⚽ Grupos'  },
-  { id:'round16',  label:'🔥 R. de 32' },
-  { id:'quarters', label:'💪 Octavos' },
-  { id:'semis',    label:'⚔️ Cuartos' },
-  { id:'final',    label:'🏆 Final'   },
-];
+  const phases = [
+    { id:'groups',   label:'⚽ Grupos'   },
+    { id:'round16',  label:'🔥 R. de 32' },
+    { id:'quarters', label:'💪 Octavos'  },
+    { id:'semis',    label:'🏅 Cuartos'  },
+    { id:'third',    label:'🥇 Semis'    },
+    { id:'final',    label:'🏆 Final'    },
+  ];
   const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
   const firstRound16Match = useMemo(() => {
-    return matches
-      .filter(m => m.phase === 'round16' && m.homeTeam && m.awayTeam)
+    return matches.filter(m => m.phase === 'round16' && m.homeTeam && m.awayTeam)
       .sort((a,b) => new Date(a.date) - new Date(b.date))[0];
   }, [matches]);
 
   const firstQuartersMatch = useMemo(() => {
-    return matches
-      .filter(m => m.phase === 'quarters' && m.homeTeam && m.awayTeam)
+    return matches.filter(m => m.phase === 'quarters' && m.homeTeam && m.awayTeam)
       .sort((a,b) => new Date(a.date) - new Date(b.date))[0];
   }, [matches]);
 
   const firstSemisMatch = useMemo(() => {
-    return matches
-      .filter(m => m.phase === 'semis' && m.homeTeam && m.awayTeam)
+    return matches.filter(m => m.phase === 'semis' && m.homeTeam && m.awayTeam)
       .sort((a,b) => new Date(a.date) - new Date(b.date))[0];
   }, [matches]);
 
   const blockedTeams = useMemo(() => {
     const blocked = new Set();
-    matches
-      .filter(m => m.phase === 'round16' && m.status === 'finished')
-      .forEach(m => {
-        if (m.homeTeam) blocked.add(m.homeTeam);
-        if (m.awayTeam) blocked.add(m.awayTeam);
-      });
+    matches.filter(m => m.phase === 'round16' && m.status === 'finished')
+      .forEach(m => { if(m.homeTeam) blocked.add(m.homeTeam); if(m.awayTeam) blocked.add(m.awayTeam); });
     return blocked;
   }, [matches]);
 
   const blockedQuartersTeams = useMemo(() => {
     const blocked = new Set();
-    matches
-      .filter(m => m.phase === 'quarters' && m.status === 'finished')
-      .forEach(m => {
-        if (m.homeTeam) blocked.add(m.homeTeam);
-        if (m.awayTeam) blocked.add(m.awayTeam);
-      });
+    matches.filter(m => m.phase === 'quarters' && m.status === 'finished')
+      .forEach(m => { if(m.homeTeam) blocked.add(m.homeTeam); if(m.awayTeam) blocked.add(m.awayTeam); });
     return blocked;
   }, [matches]);
 
   const blockedSemisTeams = useMemo(() => {
     const blocked = new Set();
-    matches
-      .filter(m => m.phase === 'semis' && m.status === 'finished')
-      .forEach(m => {
-        if (m.homeTeam) blocked.add(m.homeTeam);
-        if (m.awayTeam) blocked.add(m.awayTeam);
-      });
+    matches.filter(m => m.phase === 'semis' && m.status === 'finished')
+      .forEach(m => { if(m.homeTeam) blocked.add(m.homeTeam); if(m.awayTeam) blocked.add(m.awayTeam); });
     return blocked;
-  }, [matches]);
-
-  const reqQuarters = useMemo(() => {
-    const bl = new Set();
-    matches.filter(m => m.phase==='quarters' && m.status==='finished').forEach(m => {
-      if(m.homeTeam) bl.add(m.homeTeam);
-      if(m.awayTeam) bl.add(m.awayTeam);
-    });
-    return Math.min(8, QUARTERS_TEAMS.filter(t => !bl.has(t)).length);
-  }, [matches]);
-
-  const reqSemis = useMemo(() => {
-    const bl = new Set();
-    matches.filter(m => m.phase==='semis' && m.status==='finished').forEach(m => {
-      if(m.homeTeam) bl.add(m.homeTeam);
-      if(m.awayTeam) bl.add(m.awayTeam);
-    });
-    return Math.min(4, SEMIS_TEAMS.filter(t => !bl.has(t)).length);
   }, [matches]);
 
   const round16IsOpen = useMemo(() => {
@@ -262,7 +230,6 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     if (blockedQuartersTeams.has(teamId)) return;
     setQuartersSel(prev => {
       if (prev.includes(teamId)) return prev.filter(t => t !== teamId);
-      if (prev.length >= 99) { return prev; }
       return [...prev, teamId];
     });
   };
@@ -277,33 +244,23 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
   };
 
   const handleSaveRound16 = async () => {
-    if (round16Sel.length !== 16) { alert(`Selecciona exactamente 16 equipos (tienes ${round16Sel.length})`); return; }
+    if (round16Sel.length !== 16) { alert(`Selecciona 16 equipos`); return; }
     setSavingR16(true);
     try {
       await onSaveRound16Prediction(currentUser.id, round16Sel);
       setRound16Sel([]);
-      alert('✅ Pronóstico de clasificados guardado');
-    } catch(e) {
-      alert('Error al guardar. Intente de nuevo.');
-    } finally {
-      setSavingR16(false);
-    }
+      alert('✅ Pronóstico guardado');
+    } catch(e) { alert('Error al guardar.'); } finally { setSavingR16(false); }
   };
 
   const handleSaveQuarters = async () => {
-    const _avail = QUARTERS_TEAMS.filter(t => !blockedQuartersTeams.has(t));
-    const _req = _avail.length;
-    if (false) { alert(`Selecciona exactamente ${_req} equipos (tienes ${quartersSel.length})`); return; }
+    if (quartersSel.length === 0) { alert('Selecciona al menos 1 equipo'); return; }
     setSavingQrt(true);
     try {
       await onSaveQuartersPrediction(currentUser.id, quartersSel);
       setQuartersSel([]);
-      alert('✅ Pronóstico de clasificados a cuartos guardado');
-    } catch(e) {
-      alert('Error al guardar. Intente de nuevo.');
-    } finally {
-      setSavingQrt(false);
-    }
+      alert('✅ Pronóstico guardado');
+    } catch(e) { alert('Error al guardar.'); } finally { setSavingQrt(false); }
   };
 
   const handleSaveSemis = async () => {
@@ -312,12 +269,8 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     try {
       await onSaveSemisPrediction(currentUser.id, semisSel);
       setSemisSel([]);
-      alert('✅ Pronóstico de clasificados a semis guardado');
-    } catch(e) {
-      alert('Error al guardar. Intente de nuevo.');
-    } finally {
-      setSavingSemis(false);
-    }
+      alert('✅ Pronóstico guardado');
+    } catch(e) { alert('Error al guardar.'); } finally { setSavingSemis(false); }
   };
 
   const daysInPhase = useMemo(() => {
@@ -362,9 +315,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
   };
 
   const getUserPrediction = (matchId) => currentUser.predictions?.[matchId];
-
-  const setPredField = (matchId, field, value) =>
-    setPredictions(prev=>({...prev,[matchId]:{...prev[matchId],[field]:value}}));
+  const setPredField = (matchId, field, value) => setPredictions(prev=>({...prev,[matchId]:{...prev[matchId],[field]:value}}));
 
   const handleSubmit = async (matchId) => {
     const p = predictions[matchId]||{};
@@ -375,11 +326,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     try {
       await onMakePrediction(currentUser.id, matchId, result, parseInt(home), parseInt(away));
       setPredictions(prev=>{ const n={...prev}; delete n[matchId]; return n; });
-    } catch(e) {
-      alert('Error al guardar. Intente de nuevo.');
-    } finally {
-      setSaving(prev=>({...prev,[matchId]:false}));
-    }
+    } catch(e) { alert('Error al guardar.'); } finally { setSaving(prev=>({...prev,[matchId]:false})); }
   };
 
   const toggleReactionPicker = (matchId) => setShowReactions(prev=>({...prev,[matchId]:!prev[matchId]}));
@@ -405,6 +352,83 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
 
   const isApproved = currentUser.approved || currentUser.isAdmin;
 
+  const ClassifSection = ({ title, subtitle, color, bgColor, borderColor, teams, blocked, sel, setSel, toggle, hasPred, myPred, results, isOpen, onSave, saving: isSaving, maxSel, ptsPer }) => (
+    <div style={{...card,padding:'16px 18px',marginBottom:'12px',borderColor,background:bgColor}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
+        <div>
+          <div style={{fontSize:'14px',fontWeight:'700',color,marginBottom:'2px'}}>{title}</div>
+          <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>{subtitle}</div>
+        </div>
+        {hasPred && results.length > 0 && (
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:'13px',fontWeight:'800',color:'#4ade80'}}>+{results.filter(t=>myPred.includes(t)).length * ptsPer} pts</div>
+            <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)'}}>{results.filter(t=>myPred.includes(t)).length}/{results.length} aciertos</div>
+          </div>
+        )}
+      </div>
+      {hasPred && sel.length === 0 ? (
+        <div>
+          <div style={{padding:'10px 12px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',marginBottom:'10px'}}>
+            <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'8px'}}>✓ Tus equipos seleccionados:</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
+              {myPred.map(teamId => {
+                const team = getTeamById(teamId);
+                const isCorrect = results.includes(teamId);
+                const resultsIn = results.length > 0;
+                return (
+                  <div key={teamId} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'8px',
+                    background:resultsIn?(isCorrect?'rgba(74,222,128,0.15)':'rgba(239,68,68,0.1)'):'rgba(255,255,255,0.06)',
+                    border:resultsIn?(isCorrect?'1px solid rgba(74,222,128,0.3)':'1px solid rgba(239,68,68,0.2)'):'1px solid rgba(255,255,255,0.1)'}}>
+                    <Flag code={team?.flagCode} size={16}/>
+                    <span style={{fontSize:'11px',color:resultsIn?(isCorrect?'#4ade80':'#f87171'):'rgba(255,255,255,0.7)'}}>{team?.name||teamId}</span>
+                    {resultsIn && <span style={{fontSize:'10px'}}>{isCorrect?'✓':'✗'}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {isOpen && <button onClick={()=>setSel([...myPred])} style={{fontSize:'12px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>Modificar selección</button>}
+        </div>
+      ) : isOpen && isApproved ? (
+        <div>
+          <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'6px'}}>
+            Seleccionados: <span style={{color:sel.length>0?'#4ade80':color,fontWeight:'700'}}>{sel.length}/{maxSel}</span>
+          </div>
+          {blocked.size > 0 && <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginBottom:'10px'}}>🔒 Los equipos en gris ya jugaron</div>}
+          <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'12px'}}>
+            {teams.map(teamId => {
+              const team = getTeamById(teamId);
+              const isSelected = sel.includes(teamId);
+              const isBlocked = blocked.has(teamId);
+              return (
+                <button key={teamId} onClick={()=>toggle(teamId)} disabled={isBlocked}
+                  style={{display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',borderRadius:'8px',
+                    cursor:isBlocked?'not-allowed':'pointer', opacity:isBlocked?0.35:1,
+                    background:isBlocked?'rgba(255,255,255,0.02)':isSelected?`rgba(${color.replace('#','').match(/.{2}/g).map(h=>parseInt(h,16)).join(',')},0.15)`:'rgba(255,255,255,0.04)',
+                    border:isBlocked?'1px solid rgba(255,255,255,0.05)':isSelected?`1px solid ${color}40`:'1px solid rgba(255,255,255,0.08)',
+                    color:isBlocked?'rgba(255,255,255,0.3)':isSelected?color:'rgba(255,255,255,0.6)'}}>
+                  <Flag code={team?.flagCode} size={18}/>
+                  <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400',textDecoration:isBlocked?'line-through':'none'}}>{team?.name||teamId}</span>
+                  {isSelected && !isBlocked && <span style={{fontSize:'10px'}}>✓</span>}
+                  {isBlocked && <span style={{fontSize:'10px'}}>🔒</span>}
+                </button>
+              );
+            })}
+          </div>
+          <button onClick={onSave} disabled={isSaving||sel.length===0}
+            style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',
+              cursor:sel.length>0?'pointer':'default',border:'none',
+              background:sel.length>0?`linear-gradient(135deg,${color},${color}cc)`:'rgba(255,255,255,0.06)',
+              color:sel.length>0?'white':'rgba(255,255,255,0.3)'}}>
+            {isSaving?'⏳ Guardando...':sel.length>0?`Guardar mis ${maxSel} clasificados`:`Selecciona hasta ${maxSel} equipos`}
+          </button>
+        </div>
+      ) : !isOpen && !hasPred ? (
+        <div style={{textAlign:'center',padding:'12px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>🔒 El tiempo para pronosticar ya cerró</div>
+      ) : null}
+    </div>
+  );
+
   return (
     <div>
       <div style={{...card,padding:'14px 16px',marginBottom:'12px'}}>
@@ -417,243 +441,46 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
         </div>
       </div>
 
-      {/* SECCIÓN R32 CLASIFICADOS */}
+      {/* R32 */}
       {selectedPhase==='round16' && (
-        <div style={{...card,padding:'16px 18px',marginBottom:'12px',borderColor:'rgba(251,191,36,0.2)',background:'rgba(251,191,36,0.04)'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
-            <div>
-              <div style={{fontSize:'14px',fontWeight:'700',color:'#fbbf24',marginBottom:'2px'}}>🎯 ¿Quiénes clasifican a Octavos?</div>
-              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>Escoge 16 equipos · +2 pts por cada acierto · Máx +32 pts</div>
-            </div>
-            {hasRound16Pred && round16Results.length > 0 && (
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:'13px',fontWeight:'800',color:'#4ade80'}}>+{round16Results.filter(t => myRound16Pred.includes(t)).length * 2} pts</div>
-                <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)'}}>{round16Results.filter(t => myRound16Pred.includes(t)).length}/16 aciertos</div>
-              </div>
-            )}
-          </div>
-          {hasRound16Pred && round16Sel.length === 0 ? (
-            <div>
-              <div style={{padding:'10px 12px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',marginBottom:'10px'}}>
-                <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'8px'}}>✓ Tus 16 equipos seleccionados:</div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
-                  {myRound16Pred.map(teamId => {
-                    const team = getTeamById(teamId);
-                    const isCorrect = round16Results.includes(teamId);
-                    const resultsIn = round16Results.length > 0;
-                    return (
-                      <div key={teamId} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'8px',
-                        background:resultsIn?(isCorrect?'rgba(74,222,128,0.15)':'rgba(239,68,68,0.1)'):'rgba(255,255,255,0.06)',
-                        border:resultsIn?(isCorrect?'1px solid rgba(74,222,128,0.3)':'1px solid rgba(239,68,68,0.2)'):'1px solid rgba(255,255,255,0.1)'}}>
-                        <Flag code={team?.flagCode} size={16}/>
-                        <span style={{fontSize:'11px',color:resultsIn?(isCorrect?'#4ade80':'#f87171'):'rgba(255,255,255,0.7)'}}>{team?.name||teamId}</span>
-                        {resultsIn && <span style={{fontSize:'10px'}}>{isCorrect?'✓':'✗'}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              {round16IsOpen && (
-                <button onClick={()=>setRound16Sel([...myRound16Pred])} style={{fontSize:'12px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>Modificar selección</button>
-              )}
-            </div>
-          ) : round16IsOpen && isApproved ? (
-            <div>
-              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'6px'}}>
-                Seleccionados: <span style={{color:round16Sel.length===16?'#4ade80':'#fbbf24',fontWeight:'700'}}>{round16Sel.length}/16</span>
-              </div>
-              {blockedTeams.size > 0 && <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginBottom:'10px'}}>🔒 Los equipos en gris ya jugaron</div>}
-              <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'12px'}}>
-                {ROUND16_TEAMS.map(teamId => {
-                  const team = getTeamById(teamId);
-                  const isSelected = round16Sel.includes(teamId);
-                  const isBlocked = blockedTeams.has(teamId);
-                  return (
-                    <button key={teamId} onClick={()=>toggleRound16Team(teamId)} disabled={isBlocked}
-                      style={{display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',borderRadius:'8px',
-                        cursor:isBlocked?'not-allowed':'pointer', opacity:isBlocked?0.35:1,
-                        background:isBlocked?'rgba(255,255,255,0.02)':isSelected?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)',
-                        border:isBlocked?'1px solid rgba(255,255,255,0.05)':isSelected?'1px solid rgba(74,222,128,0.4)':'1px solid rgba(255,255,255,0.08)',
-                        color:isBlocked?'rgba(255,255,255,0.3)':isSelected?'#4ade80':'rgba(255,255,255,0.6)'}}>
-                      <Flag code={team?.flagCode} size={18}/>
-                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400',textDecoration:isBlocked?'line-through':'none'}}>{team?.name||teamId}</span>
-                      {isSelected && !isBlocked && <span style={{fontSize:'10px'}}>✓</span>}
-                      {isBlocked && <span style={{fontSize:'10px'}}>🔒</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              <button onClick={handleSaveRound16} disabled={savingR16||round16Sel.length!==16}
-                style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',cursor:round16Sel.length===16?'pointer':'default',border:'none',
-                  background:round16Sel.length===16?'linear-gradient(135deg,#d97706,#f59e0b)':'rgba(255,255,255,0.06)',
-                  color:round16Sel.length===16?'white':'rgba(255,255,255,0.3)'}}>
-                {savingR16?'⏳ Guardando...':round16Sel.length===16?'Guardar mis 16 clasificados':'Selecciona 16 equipos'}
-              </button>
-            </div>
-          ) : !round16IsOpen && !hasRound16Pred ? (
-            <div style={{textAlign:'center',padding:'12px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>🔒 El tiempo para pronosticar los clasificados ya cerró</div>
-          ) : null}
-        </div>
+        <ClassifSection
+          title="🎯 ¿Quiénes clasifican a Octavos?"
+          subtitle="Escoge 16 equipos · +2 pts por cada acierto · Máx +32 pts"
+          color="#fbbf24" bgColor="rgba(251,191,36,0.04)" borderColor="rgba(251,191,36,0.2)"
+          teams={ROUND16_TEAMS} blocked={blockedTeams}
+          sel={round16Sel} setSel={setRound16Sel} toggle={toggleRound16Team}
+          hasPred={hasRound16Pred} myPred={myRound16Pred} results={round16Results}
+          isOpen={round16IsOpen} onSave={handleSaveRound16} saving={savingR16}
+          maxSel={16} ptsPer={2}
+        />
       )}
 
-      {/* SECCIÓN OCTAVOS - CLASIFICADOS A CUARTOS */}
+      {/* OCTAVOS → clasificados a Cuartos */}
       {selectedPhase==='quarters' && (
-        <div style={{...card,padding:'16px 18px',marginBottom:'12px',borderColor:'rgba(96,165,250,0.2)',background:'rgba(96,165,250,0.04)'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
-            <div>
-              <div style={{fontSize:'14px',fontWeight:'700',color:'#93c5fd',marginBottom:'2px'}}>🎯 ¿Quiénes clasifican a Cuartos?</div>
-              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>Escoge hasta 8 equipos · +2 pts por cada acierto · Máx +16 pts</div>
-            </div>
-            {hasQuartersPred && quartersResults.length > 0 && (
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:'13px',fontWeight:'800',color:'#4ade80'}}>+{quartersResults.filter(t => myQuartersPred.includes(t)).length * 2} pts</div>
-                <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)'}}>{quartersResults.filter(t => myQuartersPred.includes(t)).length}/8 aciertos</div>
-              </div>
-            )}
-          </div>
-          {hasQuartersPred && quartersSel.length === 0 ? (
-            <div>
-              <div style={{padding:'10px 12px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',marginBottom:'10px'}}>
-                <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'8px'}}>✓ Tus equipos seleccionados:</div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
-                  {myQuartersPred.map(teamId => {
-                    const team = getTeamById(teamId);
-                    const isCorrect = quartersResults.includes(teamId);
-                    const resultsIn = quartersResults.length > 0;
-                    return (
-                      <div key={teamId} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'8px',
-                        background:resultsIn?(isCorrect?'rgba(74,222,128,0.15)':'rgba(239,68,68,0.1)'):'rgba(255,255,255,0.06)',
-                        border:resultsIn?(isCorrect?'1px solid rgba(74,222,128,0.3)':'1px solid rgba(239,68,68,0.2)'):'1px solid rgba(255,255,255,0.1)'}}>
-                        <Flag code={team?.flagCode} size={16}/>
-                        <span style={{fontSize:'11px',color:resultsIn?(isCorrect?'#4ade80':'#f87171'):'rgba(255,255,255,0.7)'}}>{team?.name||teamId}</span>
-                        {resultsIn && <span style={{fontSize:'10px'}}>{isCorrect?'✓':'✗'}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              {quartersIsOpen && (
-                <button onClick={()=>setQuartersSel([...myQuartersPred])} style={{fontSize:'12px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>Modificar selección</button>
-              )}
-            </div>
-          ) : quartersIsOpen && isApproved ? (
-            <div>
-              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'6px'}}>
-                Seleccionados: <span style={{color:quartersSel.length>0?'#4ade80':'#93c5fd',fontWeight:'700'}}>{quartersSel.length}/8</span>
-              </div>
-              {blockedQuartersTeams.size > 0 && <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginBottom:'10px'}}>🔒 Los equipos en gris ya jugaron</div>}
-              <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'12px'}}>
-                {QUARTERS_TEAMS.map(teamId => {
-                  const team = getTeamById(teamId);
-                  const isSelected = quartersSel.includes(teamId);
-                  const isBlocked = blockedQuartersTeams.has(teamId);
-                  return (
-                    <button key={teamId} onClick={()=>toggleQuartersTeam(teamId)} disabled={isBlocked}
-                      style={{display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',borderRadius:'8px',
-                        cursor:isBlocked?'not-allowed':'pointer', opacity:isBlocked?0.35:1,
-                        background:isBlocked?'rgba(255,255,255,0.02)':isSelected?'rgba(96,165,250,0.15)':'rgba(255,255,255,0.04)',
-                        border:isBlocked?'1px solid rgba(255,255,255,0.05)':isSelected?'1px solid rgba(96,165,250,0.4)':'1px solid rgba(255,255,255,0.08)',
-                        color:isBlocked?'rgba(255,255,255,0.3)':isSelected?'#93c5fd':'rgba(255,255,255,0.6)'}}>
-                      <Flag code={team?.flagCode} size={18}/>
-                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400',textDecoration:isBlocked?'line-through':'none'}}>{team?.name||teamId}</span>
-                      {isSelected && !isBlocked && <span style={{fontSize:'10px'}}>✓</span>}
-                      {isBlocked && <span style={{fontSize:'10px'}}>🔒</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              <button onClick={handleSaveQuarters} disabled={savingQrt||quartersSel.length===0}
-                style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',
-                  cursor:quartersSel.length>0?'pointer':'default',border:'none',
-                  background:quartersSel.length>0?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
-                  color:quartersSel.length>0?'white':'rgba(255,255,255,0.3)'}}>
-                {savingQrt?'⏳ Guardando...':quartersSel.length>0?'Guardar mis clasificados':'Elige tus clasificados'}
-              </button>
-            </div>
-          ) : !quartersIsOpen && !hasQuartersPred ? (
-            <div style={{textAlign:'center',padding:'12px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>🔒 El tiempo para pronosticar los clasificados a cuartos ya cerró</div>
-          ) : null}
-        </div>
+        <ClassifSection
+          title="🎯 ¿Quiénes clasifican a Cuartos?"
+          subtitle="Escoge hasta 8 equipos · +2 pts por cada acierto · Máx +16 pts"
+          color="#93c5fd" bgColor="rgba(96,165,250,0.04)" borderColor="rgba(96,165,250,0.2)"
+          teams={QUARTERS_TEAMS} blocked={blockedQuartersTeams}
+          sel={quartersSel} setSel={setQuartersSel} toggle={toggleQuartersTeam}
+          hasPred={hasQuartersPred} myPred={myQuartersPred} results={quartersResults}
+          isOpen={quartersIsOpen} onSave={handleSaveQuarters} saving={savingQrt}
+          maxSel={8} ptsPer={2}
+        />
       )}
 
-      {/* ✅ NUEVO: SECCIÓN SEMIS - CLASIFICADOS A SEMIFINALES */}
+      {/* CUARTOS → clasificados a Semis */}
       {selectedPhase==='semis' && (
-        <div style={{...card,padding:'16px 18px',marginBottom:'12px',borderColor:'rgba(168,85,247,0.2)',background:'rgba(168,85,247,0.04)'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
-            <div>
-              <div style={{fontSize:'14px',fontWeight:'700',color:'#c084fc',marginBottom:'2px'}}>🎯 ¿Quiénes clasifican a Semifinales?</div>
-              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>Escoge 4 equipos · +5 pts por cada acierto · Máx +20 pts</div>
-            </div>
-            {hasSemisPred && semisResults.length > 0 && (
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:'13px',fontWeight:'800',color:'#4ade80'}}>+{semisResults.filter(t => mySemisPred.includes(t)).length * 5} pts</div>
-                <div style={{fontSize:'10px',color:'rgba(255,255,255,0.35)'}}>{semisResults.filter(t => mySemisPred.includes(t)).length}/4 aciertos</div>
-              </div>
-            )}
-          </div>
-          {hasSemisPred && semisSel.length === 0 ? (
-            <div>
-              <div style={{padding:'10px 12px',borderRadius:'10px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',marginBottom:'10px'}}>
-                <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'8px'}}>✓ Tus 4 equipos seleccionados:</div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
-                  {mySemisPred.map(teamId => {
-                    const team = getTeamById(teamId);
-                    const isCorrect = semisResults.includes(teamId);
-                    const resultsIn = semisResults.length > 0;
-                    return (
-                      <div key={teamId} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'8px',
-                        background:resultsIn?(isCorrect?'rgba(74,222,128,0.15)':'rgba(239,68,68,0.1)'):'rgba(255,255,255,0.06)',
-                        border:resultsIn?(isCorrect?'1px solid rgba(74,222,128,0.3)':'1px solid rgba(239,68,68,0.2)'):'1px solid rgba(255,255,255,0.1)'}}>
-                        <Flag code={team?.flagCode} size={16}/>
-                        <span style={{fontSize:'11px',color:resultsIn?(isCorrect?'#4ade80':'#f87171'):'rgba(255,255,255,0.7)'}}>{team?.name||teamId}</span>
-                        {resultsIn && <span style={{fontSize:'10px'}}>{isCorrect?'✓':'✗'}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              {semisIsOpen && (
-                <button onClick={()=>setSemisSel([...mySemisPred])} style={{fontSize:'12px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>Modificar selección</button>
-              )}
-            </div>
-          ) : semisIsOpen && isApproved ? (
-            <div>
-              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',marginBottom:'6px'}}>
-                Seleccionados: <span style={{color:semisSel.length===4?'#4ade80':'#c084fc',fontWeight:'700'}}>{semisSel.length}/4</span>
-              </div>
-              {blockedSemisTeams.size > 0 && <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginBottom:'10px'}}>🔒 Los equipos en gris ya jugaron</div>}
-              <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'12px'}}>
-                {SEMIS_TEAMS.map(teamId => {
-                  const team = getTeamById(teamId);
-                  const isSelected = semisSel.includes(teamId);
-                  const isBlocked = blockedSemisTeams.has(teamId);
-                  return (
-                    <button key={teamId} onClick={()=>toggleSemisTeam(teamId)} disabled={isBlocked}
-                      style={{display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',borderRadius:'8px',
-                        cursor:isBlocked?'not-allowed':'pointer', opacity:isBlocked?0.35:1,
-                        background:isBlocked?'rgba(255,255,255,0.02)':isSelected?'rgba(168,85,247,0.15)':'rgba(255,255,255,0.04)',
-                        border:isBlocked?'1px solid rgba(255,255,255,0.05)':isSelected?'1px solid rgba(168,85,247,0.4)':'1px solid rgba(255,255,255,0.08)',
-                        color:isBlocked?'rgba(255,255,255,0.3)':isSelected?'#c084fc':'rgba(255,255,255,0.6)'}}>
-                      <Flag code={team?.flagCode} size={18}/>
-                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400',textDecoration:isBlocked?'line-through':'none'}}>{team?.name||teamId}</span>
-                      {isSelected && !isBlocked && <span style={{fontSize:'10px'}}>✓</span>}
-                      {isBlocked && <span style={{fontSize:'10px'}}>🔒</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              <button onClick={handleSaveSemis} disabled={savingSemis||semisSel.length===0}
-                style={{width:'100%',padding:'11px',borderRadius:'10px',fontWeight:'600',fontSize:'14px',
-                  cursor:semisSel.length>0?'pointer':'default',border:'none',
-                  background:semisSel.length>0?'linear-gradient(135deg,#7c3aed,#c026d3)':'rgba(255,255,255,0.06)',
-                  color:semisSel.length>0?'white':'rgba(255,255,255,0.3)'}}>
-                {savingSemis?'⏳ Guardando...':semisSel.length>0?'Guardar mis 4 clasificados a Semis':'Selecciona 4 equipos'}
-              </button>
-            </div>
-          ) : !semisIsOpen && !hasSemisPred ? (
-            <div style={{textAlign:'center',padding:'12px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>🔒 El tiempo para pronosticar los clasificados a semis ya cerró</div>
-          ) : null}
-        </div>
+        <ClassifSection
+          title="🎯 ¿Quiénes clasifican a Semifinales?"
+          subtitle="Escoge 4 equipos · +5 pts por cada acierto · Máx +20 pts"
+          color="#c084fc" bgColor="rgba(168,85,247,0.04)" borderColor="rgba(168,85,247,0.2)"
+          teams={SEMIS_TEAMS} blocked={blockedSemisTeams}
+          sel={semisSel} setSel={setSemisSel} toggle={toggleSemisTeam}
+          hasPred={hasSemisPred} myPred={mySemisPred} results={semisResults}
+          isOpen={semisIsOpen} onSave={handleSaveSemis} saving={savingSemis}
+          maxSel={4} ptsPer={5}
+        />
       )}
 
       <div style={{...card,padding:'12px 16px',marginBottom:'12px'}}>
@@ -786,12 +613,10 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
                             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.8)',fontWeight:'500'}}>
                               {resultLabel}{scoreLabel && <span style={{color:'rgba(255,255,255,0.5)',marginLeft:'6px'}}>· {scoreLabel}</span>}
                             </div>
-                            {userPred.timestamp && <div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',marginTop:'3px'}}>🕐 Registrado a las {formatTimestamp(userPred.timestamp)}</div>}
+                            {userPred.timestamp && <div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',marginTop:'3px'}}>🕐 {formatTimestamp(userPred.timestamp)}</div>}
                           </div>
-                          <div style={{textAlign:'right'}}>
-                            <div style={{fontSize:'14px',fontWeight:'700',color:exact?'#fde047':correct?'#4ade80':'#f87171'}}>
-                              {exact?`🎯 Exacto +${pts.exact}`:correct?`✓ Correcto +${pts.correct}`:'✗ Incorrecto'}
-                            </div>
+                          <div style={{fontSize:'14px',fontWeight:'700',color:exact?'#fde047':correct?'#4ade80':'#f87171'}}>
+                            {exact?`🎯 Exacto +${pts.exact}`:correct?`✓ Correcto +${pts.correct}`:'✗ Incorrecto'}
                           </div>
                         </div>
                         <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:'8px'}}>
@@ -805,12 +630,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
                   {(()=>{
                     const otherPreds = users
                       .filter(u=>u.id!==currentUser.id&&u.predictions?.[match.id])
-                      .map(u=>{
-                        const pred=u.predictions[match.id];
-                        const { correct, exact } = calcPredResult(pred, match);
-                        const { resultLabel, scoreLabel } = getPredLabel(pred, homeTeam, awayTeam);
-                        return {user:u,pred,correct,exact,resultLabel,scoreLabel};
-                      });
+                      .map(u=>{ const pred=u.predictions[match.id]; const { correct, exact } = calcPredResult(pred, match); const { resultLabel, scoreLabel } = getPredLabel(pred, homeTeam, awayTeam); return {user:u,pred,correct,exact,resultLabel,scoreLabel}; });
                     if (!otherPreds.length) return null;
                     return(
                       <div style={{marginBottom:'10px',padding:'12px',borderRadius:'10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
@@ -823,19 +643,13 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
                                 background:correct?'rgba(22,163,74,0.06)':'rgba(239,68,68,0.06)',
                                 border:`1px solid ${correct?'rgba(22,163,74,0.15)':'rgba(239,68,68,0.15)'}`}}>
                                 <div style={{display:'flex',alignItems:'center',gap:'6px',flex:1,minWidth:0}}>
-                                  {team?.flagCode
-                                    ?<img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={18} height={18} style={{borderRadius:'50%',flexShrink:0}} onError={e=>{e.target.style.display='none';}}/>
-                                    :<span style={{fontSize:'14px',flexShrink:0}}>{user.avatar||'👤'}</span>
-                                  }
+                                  {team?.flagCode?<img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={18} height={18} style={{borderRadius:'50%',flexShrink:0}} onError={e=>{e.target.style.display='none';}}/>:<span style={{fontSize:'14px',flexShrink:0}}>{user.avatar||'👤'}</span>}
                                   <div style={{minWidth:0}}>
                                     <div style={{fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.85)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                                      {user.name || user.nickname || 'Usuario'}
-                                      {user.nickname && user.name && user.nickname !== user.name && (
-                                        <span style={{fontSize:'10px',fontWeight:'400',color:'rgba(255,255,255,0.4)',marginLeft:'4px'}}>({user.nickname})</span>
-                                      )}
+                                      {user.name||user.nickname||'Usuario'}{user.nickname&&user.name&&user.nickname!==user.name&&<span style={{fontSize:'10px',fontWeight:'400',color:'rgba(255,255,255,0.4)',marginLeft:'4px'}}>({user.nickname})</span>}
                                     </div>
                                     <span style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>{resultLabel}{scoreLabel?` · ${scoreLabel}`:''}</span>
-                                    {pred.timestamp && <div style={{fontSize:'10px',color:'rgba(255,255,255,0.25)'}}>🕐 Registrado a las {formatTimestamp(pred.timestamp)}</div>}
+                                    {pred.timestamp&&<div style={{fontSize:'10px',color:'rgba(255,255,255,0.25)'}}>🕐 {formatTimestamp(pred.timestamp)}</div>}
                                   </div>
                                 </div>
                                 <span style={{fontSize:'12px',fontWeight:'700',color:exact?'#fde047':correct?'#4ade80':'#f87171',flexShrink:0,marginLeft:'8px'}}>
@@ -850,7 +664,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
                   })()}
                   <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:'10px',display:'flex',gap:'6px',flexWrap:'wrap',alignItems:'center'}}>
                     {Object.entries(reactionCounts).map(([emoji,count])=>(
-                      <button key={emoji} onClick={()=>handleReaction(match.id,emoji)} title={getUsersWhoReacted(match.id,emoji).join(', ')}
+                      <button key={emoji} onClick={()=>handleReaction(match.id,emoji)}
                         style={{padding:'3px 9px',borderRadius:'16px',fontSize:'13px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',
                           background:reactions[match.id]?.[currentUser.id]===emoji?'rgba(59,130,246,0.2)':'rgba(255,255,255,0.05)',
                           border:reactions[match.id]?.[currentUser.id]===emoji?'1px solid rgba(59,130,246,0.5)':'1px solid rgba(255,255,255,0.1)'}}>
@@ -895,7 +709,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
                       <div style={{fontSize:'14px',fontWeight:'700',color:'#4ade80',marginBottom:'4px'}}>
                         {userPred.homeScore!==undefined&&userPred.awayScore!==undefined?`${userPred.homeScore} - ${userPred.awayScore}`:userPred.result==='home'?`Gana ${homeTeam?.name}`:userPred.result==='away'?`Gana ${awayTeam?.name}`:'Empate'}
                       </div>
-                      {userPred.timestamp && <div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',marginBottom:'8px'}}>🕐 Registrado a las {formatTimestamp(userPred.timestamp)}</div>}
+                      {userPred.timestamp&&<div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',marginBottom:'8px'}}>🕐 {formatTimestamp(userPred.timestamp)}</div>}
                       <button onClick={()=>setPredictions(prev=>({...prev,[match.id]:{result:userPred.result||'draw',home:userPred.homeScore??0,away:userPred.awayScore??0}}))}
                         style={{fontSize:'12px',color:'#93c5fd',background:'none',border:'none',cursor:'pointer'}}>Modificar</button>
                     </div>
@@ -906,9 +720,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
                         <button style={btnGEP((localPred?.result||'draw')==='home','74,222,128')} onClick={()=>setPredField(match.id,'result','home')}>
                           <div style={{marginBottom:'4px'}}><Flag code={homeTeam?.flagCode} size={20}/></div>Gana
                         </button>
-                        <button style={btnGEP((localPred?.result||'draw')==='draw','250,204,21')} onClick={()=>setPredField(match.id,'result','draw')}>
-                          🤝<br/>Empate
-                        </button>
+                        <button style={btnGEP((localPred?.result||'draw')==='draw','250,204,21')} onClick={()=>setPredField(match.id,'result','draw')}>🤝<br/>Empate</button>
                         <button style={btnGEP((localPred?.result||'draw')==='away','96,165,250')} onClick={()=>setPredField(match.id,'result','away')}>
                           <div style={{marginBottom:'4px'}}><Flag code={awayTeam?.flagCode} size={20}/></div>Gana
                         </button>
