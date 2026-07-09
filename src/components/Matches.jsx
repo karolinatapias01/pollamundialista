@@ -312,6 +312,7 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     setSavingSemis(true);
     try {
       console.log("GUARDANDO:",currentUser.id, semisSel); await onSaveSemisPrediction(currentUser.id, semisSel);
+      setSemisSaved(true);
       setSemisSel([]);
       alert('✅ Pronóstico de clasificados a semis guardado');
     } catch(e) {
