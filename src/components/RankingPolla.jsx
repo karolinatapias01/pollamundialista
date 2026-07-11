@@ -11,8 +11,12 @@ const Avatar = ({ user, size = 32 }) => {
   return <span style={{fontSize:`${size*0.75}px`}}>{user?.avatar||'👤'}</span>;
 };
 
+// NOTA: rankingForceOpen ya NO se usa para bloquear el pronóstico individual.
+// Se deja como prop por compatibilidad con App.jsx/AdminPanel, pero la lógica real es:
+//   habilitado + no ha guardado aún + no se calcularon resultados finales => puede pronosticar
+//   apenas guarda su Top 5, queda congelado (no puede editar) hasta que se recalculen resultados
 const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForceOpen, rankingMonto, rankingCalculated }) => {
-  // Participantes HABILITADOS (pagaron) — solo ellos pueden pronosticar y solo ellos compiten en la clasificación de la polla
+  // Participantes HABILITADOS (pagaron) — solo ellos compiten en la clasificación de la polla
   const enabledUsers = users.filter(u => u.rankingPollaEnabled);
 
   // ¿El usuario actual está habilitado para pronosticar?
@@ -21,6 +25,7 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
   // Su pronóstico guardado (array de 5 uids en orden)
   const savedPrediction = currentUser.rankingPrediction?.positions || [];
   const savedTimestamp = currentUser.rankingPrediction?.timestamp || null;
+  const hasSubmitted = savedPrediction.length === 5;
 
   const [selected, setSelected] = useState(savedPrediction);
   const [saving, setSaving]     = useState(false);
@@ -30,15 +35,14 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
     setSelected(currentUser.rankingPrediction?.positions || []);
   }, [currentUser.rankingPrediction]);
 
-  // Ventana abierta para pronosticar
-  const windowOpen = rankingForceOpen && !rankingCalculated;
+  // Puede pronosticar/editar mientras: esté habilitado, no haya guardado ya, y no se hayan calculado resultados finales
+  const canPredict = isEnabled && !rankingCalculated && !hasSubmitted;
 
   // Candidatos elegibles = TODOS los usuarios del ranking general (habilitado o no).
-  // El "habilitado" solo controla si TÚ puedes entrar a pronosticar, no quién puede aparecer en tu Top 5.
   const candidates = users;
 
   const toggleUser = (uid) => {
-    if (!windowOpen) return;
+    if (!canPredict) return;
     setSelected(prev => {
       if (prev.includes(uid)) return prev.filter(x => x !== uid);
       if (prev.length >= 5) { alert('Ya seleccionaste 5. Quita uno para cambiar.'); return prev; }
@@ -66,11 +70,11 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
 
   const handleSave = async () => {
     if (selected.length !== 5) { alert('Debes elegir exactamente 5 usuarios en orden.'); return; }
-    if (!confirm('¿Guardar tu Top 5? Podrás cambiarlo mientras la ventana esté abierta.')) return;
+    if (!confirm('¿Guardar tu Top 5? Una vez guardado NO podrás modificarlo.')) return;
     setSaving(true);
     try {
       await onSaveRankingPrediction(currentUser.id, selected);
-      alert('✅ ¡Tu Top 5 fue guardado!');
+      alert('✅ ¡Tu Top 5 fue guardado y quedó bloqueado!');
     } catch (e) {
       alert('Error al guardar. Intenta de nuevo.');
     } finally {
@@ -161,16 +165,16 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
       {/* ═══════ VISTA: MI TOP 5 ═══════ */}
       {view==='predict' && (
         <>
-          {/* Estado de la ventana */}
+          {/* Estado de tu pronóstico */}
           <div style={{...card,padding:'14px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.6)'}}>
-              Estado de la ventana:
+              Estado de tu pronóstico:
             </div>
             <span style={{fontSize:'12px',fontWeight:'700',padding:'4px 12px',borderRadius:'8px',
-              background: windowOpen ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.12)',
-              color: windowOpen ? '#4ade80' : '#f87171',
-              border: windowOpen ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(239,68,68,0.25)'}}>
-              {rankingCalculated ? '🏁 Finalizada' : windowOpen ? '🔓 Abierta' : '🔒 Cerrada'}
+              background: rankingCalculated ? 'rgba(148,163,184,0.15)' : hasSubmitted ? 'rgba(74,222,128,0.15)' : 'rgba(245,158,11,0.15)',
+              color: rankingCalculated ? '#94a3b8' : hasSubmitted ? '#4ade80' : '#fbbf24',
+              border: rankingCalculated ? '1px solid rgba(148,163,184,0.3)' : hasSubmitted ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(245,158,11,0.3)'}}>
+              {rankingCalculated ? '🏁 Finalizada' : hasSubmitted ? '🔒 Guardado (no editable)' : '📝 Pendiente por guardar'}
             </span>
           </div>
 
@@ -180,14 +184,15 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
               🎯 Elige <strong style={{color:'white'}}>5 usuarios en orden</strong> (del 1° al 5°).<br/>
               ✅ <strong style={{color:'#4ade80'}}>+5 pts</strong> por acierto en posición exacta.<br/>
               🔸 <strong style={{color:'#93c5fd'}}>+2 pts</strong> si está en el Top 5 pero en otra posición.<br/>
-              💡 Puedes votarte a ti mismo. Máximo posible: <strong style={{color:'#fbbf24'}}>25 pts</strong>.
+              💡 Puedes votarte a ti mismo. Máximo posible: <strong style={{color:'#fbbf24'}}>25 pts</strong>.<br/>
+              ⚠️ Una vez guardado tu Top 5, <strong style={{color:'white'}}>no podrás modificarlo</strong>.
             </div>
           </div>
 
           {/* Tu selección ordenada */}
           {selected.length > 0 && (
             <div style={{...card,padding:'16px'}}>
-              <div style={{fontSize:'13px',fontWeight:'700',color:'white',marginBottom:'12px'}}>Tu Top 5 (ordénalo):</div>
+              <div style={{fontSize:'13px',fontWeight:'700',color:'white',marginBottom:'12px'}}>Tu Top 5{canPredict ? ' (ordénalo)' : ''}:</div>
               <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
                 {selected.map((uid, idx) => {
                   const u = users.find(x => x.id === uid);
@@ -197,7 +202,7 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
                       <span style={{fontSize:'20px',minWidth:'28px'}}>{medal(idx)}</span>
                       <Avatar user={u} size={28}/>
                       <span style={{flex:1,fontSize:'14px',fontWeight:'600',color:'white'}}>{u.nickname||u.name}</span>
-                      {windowOpen && (
+                      {canPredict && (
                         <div style={{display:'flex',gap:'4px'}}>
                           <button onClick={()=>moveUp(idx)} disabled={idx===0}
                             style={{width:'30px',height:'30px',borderRadius:'8px',border:'1px solid rgba(255,255,255,0.1)',cursor:idx===0?'default':'pointer',
@@ -218,7 +223,7 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
           )}
 
           {/* Lista de candidatos */}
-          {windowOpen && (
+          {canPredict && (
             <div style={{...card,padding:'16px'}}>
               <div style={{fontSize:'13px',fontWeight:'700',color:'white',marginBottom:'4px'}}>
                 Elige participantes ({selected.length}/5)
@@ -255,31 +260,32 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
           )}
 
           {/* Botón guardar */}
-          {windowOpen && (
+          {canPredict && (
             <button onClick={handleSave} disabled={saving || selected.length !== 5}
               style={{width:'100%',padding:'14px',borderRadius:'12px',fontWeight:'700',fontSize:'14px',border:'none',
                 cursor:(saving||selected.length!==5)?'default':'pointer',
                 background:selected.length===5?'linear-gradient(135deg,#d97706,#f59e0b)':'rgba(255,255,255,0.06)',
                 color:selected.length===5?'white':'rgba(255,255,255,0.3)'}}>
-              {saving ? '⏳ Guardando...' : selected.length===5 ? '💾 Guardar mi Top 5' : `Elige ${5-selected.length} más`}
+              {saving ? '⏳ Guardando...' : selected.length===5 ? '💾 Guardar mi Top 5 (definitivo)' : `Elige ${5-selected.length} más`}
             </button>
           )}
 
-          {/* Ventana cerrada: mostrar pronóstico guardado */}
-          {!windowOpen && savedPrediction.length > 0 && (
+          {/* Ya guardó: mostrar aviso de bloqueo */}
+          {!canPredict && hasSubmitted && (
             <div style={{...card,padding:'14px 16px'}}>
               <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>
-                {rankingCalculated ? '🏁 Resultados finales calculados.' : '🔒 La ventana está cerrada.'} Tu pronóstico quedó registrado.
+                {rankingCalculated ? '🏁 Resultados finales calculados.' : '🔒 Ya guardaste tu Top 5 y quedó bloqueado. No se puede modificar.'}
                 {savedTimestamp && <span style={{display:'block',marginTop:'4px',color:'rgba(255,255,255,0.35)'}}>Guardado: {fmtDate(savedTimestamp)}</span>}
               </div>
             </div>
           )}
 
-          {!windowOpen && savedPrediction.length === 0 && (
+          {/* Se calcularon resultados y nunca alcanzó a guardar */}
+          {!canPredict && !hasSubmitted && rankingCalculated && (
             <div style={{...card,padding:'24px',textAlign:'center'}}>
               <div style={{fontSize:'32px',marginBottom:'8px'}}>⏳</div>
               <div style={{fontSize:'14px',color:'rgba(255,255,255,0.5)'}}>
-                La ventana de pronóstico está cerrada y no registraste tu Top 5.
+                Los resultados ya fueron calculados y no alcanzaste a registrar tu Top 5.
               </div>
             </div>
           )}
