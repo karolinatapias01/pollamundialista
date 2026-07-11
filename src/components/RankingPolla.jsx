@@ -12,10 +12,10 @@ const Avatar = ({ user, size = 32 }) => {
 };
 
 const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForceOpen, rankingMonto, rankingCalculated }) => {
-  // Participantes habilitados (pagaron) — solo ellos entran al ranking de la polla
+  // Participantes HABILITADOS (pagaron) — solo ellos pueden pronosticar y solo ellos compiten en la clasificación de la polla
   const enabledUsers = users.filter(u => u.rankingPollaEnabled);
 
-  // ¿El usuario actual está habilitado?
+  // ¿El usuario actual está habilitado para pronosticar?
   const isEnabled = !!currentUser.rankingPollaEnabled || currentUser.isAdmin;
 
   // Su pronóstico guardado (array de 5 uids en orden)
@@ -33,8 +33,9 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
   // Ventana abierta para pronosticar
   const windowOpen = rankingForceOpen && !rankingCalculated;
 
-  // Candidatos elegibles = todos los usuarios habilitados (incluye al propio usuario: auto-voto permitido)
-  const candidates = enabledUsers;
+  // Candidatos elegibles = TODOS los usuarios del ranking general (habilitado o no).
+  // El "habilitado" solo controla si TÚ puedes entrar a pronosticar, no quién puede aparecer en tu Top 5.
+  const candidates = users;
 
   const toggleUser = (uid) => {
     if (!windowOpen) return;
@@ -77,8 +78,8 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
     }
   };
 
-  // Ranking real (contra el que se comparan las predicciones): usuarios habilitados ordenados por puntos del ranking general
-  const realRanking = [...enabledUsers].sort((a,b) => (b.points||0) - (a.points||0));
+  // Ranking real (contra el que se comparan las predicciones) = TODOS los usuarios del ranking general, ordenados por puntos
+  const realRanking = [...users].sort((a,b) => (b.points||0) - (a.points||0));
   const realTop5 = realRanking.slice(0, 5).map(u => u.id);
 
   // Cálculo de puntos de la polla del ranking para mostrar (preview en vivo)
@@ -246,7 +247,7 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
                 })}
                 {candidates.length === 0 && (
                   <div style={{textAlign:'center',padding:'24px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>
-                    Aún no hay participantes habilitados. Dianita debe habilitar a quienes paguen.
+                    Aún no hay usuarios en el ranking general.
                   </div>
                 )}
               </div>
@@ -296,7 +297,7 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
             </div>
           )}
 
-          {/* Top 5 real actual */}
+          {/* Top 5 real actual — de TODOS los usuarios del ranking general */}
           <div style={{...card,padding:'16px'}}>
             <div style={{fontSize:'13px',fontWeight:'700',color:'white',marginBottom:'12px'}}>
               {rankingCalculated ? '🏁 Top 5 final del ranking' : '📈 Top 5 actual del ranking'}
@@ -311,15 +312,15 @@ const RankingPolla = ({ currentUser, users, onSaveRankingPrediction, rankingForc
                 </div>
               ))}
               {realRanking.length === 0 && (
-                <div style={{textAlign:'center',padding:'20px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>Sin participantes habilitados aún.</div>
+                <div style={{textAlign:'center',padding:'20px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>Sin participantes en el ranking aún.</div>
               )}
             </div>
           </div>
 
-          {/* Clasificación de la Polla del Ranking */}
+          {/* Clasificación de la Polla del Ranking — solo compiten los HABILITADOS (los que pagaron) */}
           <div style={{...card,padding:'16px'}}>
             <div style={{fontSize:'13px',fontWeight:'700',color:'white',marginBottom:'4px'}}>👑 Clasificación Polla del Ranking</div>
-            <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginBottom:'12px'}}>Puntos por acertar el Top 5. Solo participantes habilitados.</div>
+            <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginBottom:'12px'}}>Puntos por acertar el Top 5. Solo participantes habilitados (pagaron).</div>
             <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
               {[...enabledUsers]
                 .map(u => ({
