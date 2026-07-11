@@ -9,6 +9,7 @@ import History from './components/History';
 import Groups from './components/Groups';
 import News from './components/News';
 import AdminPanel from './components/AdminPanel';
+import RankingPolla from './components/RankingPolla';
 import Tutorial from './components/Tutorial';
 import useAppState from './hooks/useAppState';
 import { startAutoSync } from './syncService';
@@ -87,7 +88,11 @@ function App() {
     openQuartersPredictions, closeQuartersPredictions,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
-    openAllGroups, closeAllGroups, groupsForceOpen
+    openAllGroups, closeAllGroups, groupsForceOpen,
+    saveRankingPrediction, toggleRankingEnabled,
+    openRankingPolla, closeRankingPolla, saveRankingMonto,
+    calculateRankingPolla, reopenRankingPolla,
+    rankingForceOpen, rankingMonto, rankingCalculated
   } = useAppState();
 
   const [activeTab,    setActiveTab]    = useState('home');
@@ -172,13 +177,14 @@ function App() {
   }
 
   const tabs = [
-    { id:'home',    label:'Inicio',     emoji:'🏠' },
-    { id:'matches', label:'Partidos',   emoji:'⚽' },
-    { id:'groups',  label:'Grupos',     emoji:'📊' },
-    { id:'results', label:'Resultados', emoji:'🏁' },
-    { id:'ranking', label:'Ranking',    emoji:'🏆' },
-    { id:'news',    label:'Noticias',   emoji:'📰' },
-    { id:'history', label:'Historial',  emoji:'📋' },
+    { id:'home',        label:'Inicio',       emoji:'🏠' },
+    { id:'matches',     label:'Partidos',     emoji:'⚽' },
+    { id:'groups',      label:'Grupos',       emoji:'📊' },
+    { id:'results',     label:'Resultados',   emoji:'🏁' },
+    { id:'ranking',     label:'Ranking',      emoji:'🏆' },
+    { id:'rankingpolla',label:'Polla Ranking',emoji:'👑' },
+    { id:'news',        label:'Noticias',     emoji:'📰' },
+    { id:'history',     label:'Historial',    emoji:'📋' },
     ...(currentUser.isAdmin ? [{ id:'admin', label:'Admin', emoji:'👑' }] : [])
   ];
 
@@ -265,9 +271,10 @@ function App() {
         {activeTab==='groups'  && <Groups currentUser={currentUser} onSaveGroupPrediction={saveGroupPrediction} users={users} matches={matches} groupsForceOpen={groupsForceOpen}/>}
         {activeTab==='results' && <Results matches={matches} currentUser={currentUser} users={users}/>}
         {activeTab==='ranking' && <Ranking users={users} currentUser={currentUser}/>}
+        {activeTab==='rankingpolla' && <RankingPolla currentUser={currentUser} users={users} onSaveRankingPrediction={saveRankingPrediction} rankingForceOpen={rankingForceOpen} rankingMonto={rankingMonto} rankingCalculated={rankingCalculated}/>}
         {activeTab==='news'    && <News/>}
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} onUpdateQuartersResults={updateQuartersResults} onRecalculateAll={recalculateAllPoints} onOpenRound16={openRound16Predictions} onCloseRound16={closeRound16Predictions} onOpenQuarters={openQuartersPredictions} onCloseQuarters={closeQuartersPredictions} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups}/>}
+        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} onUpdateQuartersResults={updateQuartersResults} onRecalculateAll={recalculateAllPoints} onOpenRound16={openRound16Predictions} onCloseRound16={closeRound16Predictions} onOpenQuarters={openQuartersPredictions} onCloseQuarters={closeQuartersPredictions} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups} onToggleRankingEnabled={toggleRankingEnabled} onOpenRankingPolla={openRankingPolla} onCloseRankingPolla={closeRankingPolla} onSaveRankingMonto={saveRankingMonto} onCalculateRankingPolla={calculateRankingPolla} onReopenRankingPolla={reopenRankingPolla} rankingForceOpen={rankingForceOpen} rankingMonto={rankingMonto} rankingCalculated={rankingCalculated}/>}
       </main>
 
       <button onClick={()=>setShowRules(true)}
@@ -317,6 +324,10 @@ function App() {
               { title:'🏆 Campeón del Mundial', items:[
                 { label:'Adivinas el campeón', pts:'+30 pts', color:'#c084fc' },
               ]},
+              { title:'👑 Polla del Ranking (opcional)', items:[
+                { label:'Usuario en posición exacta del Top 5', pts:'+5 pts', color:'#4ade80' },
+                { label:'Usuario en el Top 5 (otra posición)', pts:'+2 pts', color:'#93c5fd' },
+              ]},
             ].map(section=>(
               <div key={section.title} style={{ marginBottom:'20px' }}>
                 <div style={{ fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.7)', marginBottom:'10px' }}>{section.title}</div>
@@ -334,6 +345,7 @@ function App() {
               <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.5)', lineHeight:'1.6' }}>
                 🔒 Los pronósticos cierran <strong style={{color:'white'}}>10 minutos</strong> antes de cada partido.<br/>
                 🔥 Los clasificados se pronostican antes del primer partido de cada ronda.<br/>
+                👑 La Polla del Ranking es opcional y tiene inscripción aparte.<br/>
                 💰 Inscripción: <strong style={{color:'white'}}>$15.000</strong>
               </div>
             </div>

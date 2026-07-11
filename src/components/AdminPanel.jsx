@@ -90,7 +90,7 @@ const calcUserPoints = (user, matches) => {
   return { matchPts, groupPts, round16Pts, quartersPts, championPts, total: matchPts + groupPts + round16Pts + quartersPts + championPts };
 };
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onUpdateQuartersResults, onRecalculateAll, onOpenRound16, onCloseRound16, onOpenQuarters, onCloseQuarters, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onUpdateQuartersResults, onRecalculateAll, onOpenRound16, onCloseRound16, onOpenQuarters, onCloseQuarters, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups, onToggleRankingEnabled, onOpenRankingPolla, onCloseRankingPolla, onSaveRankingMonto, onCalculateRankingPolla, onReopenRankingPolla, rankingForceOpen, rankingMonto, rankingCalculated }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
@@ -112,6 +112,9 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [savingQrt2, setSavingQrt2] = useState(false);
   const [verifyUser, setVerifyUser] = useState(null);
   const [recalculating, setRecalculating] = useState(false);
+  const [montoInput, setMontoInput] = useState(rankingMonto || '$10.000');
+  const [loadingRanking, setLoadingRanking] = useState(false);
+  const [calculatingRanking, setCalculatingRanking] = useState(false);
 
   const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
   const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
@@ -223,6 +226,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         {sectionBtn('round16results','16 Clasif.','🔥')}
         {sectionBtn('quartersresults','8 Clasif.','💪')}
         {sectionBtn('champion','Campeón','🏆')}
+        {sectionBtn('rankingpolla','Polla Ranking','👑')}
         {sectionBtn('verify','Verificar','📋')}
         {sectionBtn('users','Usuarios','👥')}
         {sectionBtn('reset','Resetear','🔄')}
@@ -571,7 +575,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         </div>
       )}
 
-      {/* ✅ NUEVO: 8 CLASIFICADOS OCTAVOS */}
+      {/* 8 CLASIFICADOS OCTAVOS */}
       {activeSection==='quartersresults' && (
         <div style={{...card,padding:'20px'}}>
           <div style={{marginBottom:'16px'}}>
@@ -680,6 +684,142 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {/* ✅ NUEVO: POLLA DEL RANKING */}
+      {activeSection==='rankingpolla' && (
+        <div style={{...card,padding:'20px'}}>
+          <div style={{marginBottom:'16px'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>👑 Gestión Polla del Ranking</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>
+              Polla paralela e independiente. Los participantes pronostican el Top 5 final del ranking general.
+            </p>
+          </div>
+
+          {/* Monto configurable */}
+          <div style={{padding:'16px',borderRadius:'12px',background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)',marginBottom:'16px'}}>
+            <div style={{fontSize:'13px',fontWeight:'700',color:'#fbbf24',marginBottom:'8px'}}>💰 Monto de inscripción</div>
+            <div style={{display:'flex',gap:'8px'}}>
+              <input value={montoInput} onChange={e=>setMontoInput(e.target.value)} placeholder="$10.000"
+                style={{flex:1,padding:'10px 14px',borderRadius:'10px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(245,158,11,0.3)',color:'white',fontSize:'14px',outline:'none'}}/>
+              <button onClick={async()=>{
+                await onSaveRankingMonto(montoInput);
+                alert('✓ Monto actualizado.');
+              }}
+                style={{padding:'10px 18px',borderRadius:'10px',background:'linear-gradient(135deg,#d97706,#f59e0b)',border:'none',color:'white',fontWeight:'700',fontSize:'13px',cursor:'pointer'}}>
+                Guardar
+              </button>
+            </div>
+            <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginTop:'6px'}}>Este texto se muestra a los usuarios no habilitados.</div>
+          </div>
+
+          {/* Estado + abrir/cerrar ventana */}
+          <div style={{padding:'16px',borderRadius:'12px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'16px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}}>
+              <div style={{fontSize:'13px',fontWeight:'700',color:'white'}}>🚪 Ventana de pronóstico</div>
+              <span style={{fontSize:'12px',fontWeight:'700',padding:'4px 12px',borderRadius:'8px',
+                background: rankingCalculated ? 'rgba(168,85,247,0.15)' : rankingForceOpen ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.12)',
+                color: rankingCalculated ? '#c084fc' : rankingForceOpen ? '#4ade80' : '#f87171'}}>
+                {rankingCalculated ? '🏁 Finalizada' : rankingForceOpen ? '🔓 Abierta' : '🔒 Cerrada'}
+              </span>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+              <button disabled={loadingRanking}
+                onClick={async()=>{
+                  if(!confirm('¿Abrir la ventana de pronóstico de la Polla del Ranking?')) return;
+                  setLoadingRanking(true);
+                  await onOpenRankingPolla();
+                  setLoadingRanking(false);
+                  alert('✓ Ventana abierta.');
+                }}
+                style={{width:'100%',padding:'12px',background:'rgba(74,222,128,0.15)',border:'1px solid rgba(74,222,128,0.4)',color:'#4ade80',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:'pointer'}}>
+                🔓 Abrir ventana de pronóstico
+              </button>
+              <button disabled={loadingRanking}
+                onClick={async()=>{
+                  if(!confirm('¿Cerrar la ventana de pronóstico?')) return;
+                  setLoadingRanking(true);
+                  await onCloseRankingPolla();
+                  setLoadingRanking(false);
+                  alert('✓ Ventana cerrada.');
+                }}
+                style={{width:'100%',padding:'12px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontWeight:'700',fontSize:'14px',borderRadius:'10px',cursor:'pointer'}}>
+                🔒 Cerrar ventana de pronóstico
+              </button>
+            </div>
+          </div>
+
+          {/* Habilitar participantes */}
+          <div style={{padding:'16px',borderRadius:'12px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'16px'}}>
+            <div style={{fontSize:'13px',fontWeight:'700',color:'white',marginBottom:'4px'}}>✅ Habilitar participantes (pagaron)</div>
+            <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginBottom:'12px'}}>
+              Marca a quienes consignaron el monto. Solo ellos entran a la Polla del Ranking.
+              Habilitados: <strong style={{color:'#4ade80'}}>{approvedUsers.filter(u=>u.rankingPollaEnabled).length}</strong>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:'6px',maxHeight:'320px',overflowY:'auto'}}>
+              {approvedUsers.map(u => {
+                const team = getTeamById(u.avatar);
+                const on = !!u.rankingPollaEnabled;
+                return (
+                  <div key={u.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',borderRadius:'10px',
+                    background:on?'rgba(74,222,128,0.08)':'rgba(255,255,255,0.03)',
+                    border:on?'1px solid rgba(74,222,128,0.25)':'1px solid rgba(255,255,255,0.06)'}}>
+                    {team?.flagCode
+                      ? <img src={`https://hatscripts.github.io/circle-flags/flags/${team.flagCode}.svg`} width={26} height={26} style={{borderRadius:'50%'}} onError={e=>{e.target.style.display='none';}}/>
+                      : <span style={{fontSize:'20px'}}>{u.avatar||'👤'}</span>}
+                    <span style={{flex:1,fontSize:'13px',fontWeight:'600',color:'white'}}>{u.name}{u.nickname?` "${u.nickname}"`:''}</span>
+                    <button onClick={()=>onToggleRankingEnabled(u.id, !on)}
+                      style={{padding:'6px 14px',borderRadius:'8px',fontSize:'12px',fontWeight:'700',cursor:'pointer',border:'none',
+                        background:on?'rgba(74,222,128,0.2)':'rgba(255,255,255,0.06)',
+                        color:on?'#4ade80':'rgba(255,255,255,0.5)'}}>
+                      {on?'✅ Habilitado':'Habilitar'}
+                    </button>
+                  </div>
+                );
+              })}
+              {approvedUsers.length===0 && (
+                <div style={{textAlign:'center',padding:'20px',color:'rgba(255,255,255,0.35)',fontSize:'13px'}}>No hay usuarios aprobados aún.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Calcular resultados finales */}
+          <div style={{padding:'16px',borderRadius:'12px',background:'rgba(168,85,247,0.06)',border:'1px solid rgba(168,85,247,0.2)'}}>
+            <div style={{fontSize:'13px',fontWeight:'700',color:'#c084fc',marginBottom:'4px'}}>🧮 Calcular resultados finales</div>
+            <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)',lineHeight:'1.6',marginBottom:'12px'}}>
+              Congela el Top 5 actual del ranking y asigna los puntos definitivos (+5 exacto / +2 en top). Hazlo cuando termine el Mundial.
+            </div>
+            <button disabled={calculatingRanking}
+              onClick={async()=>{
+                if(!confirm('¿Calcular los resultados finales de la Polla del Ranking? Esto congela el Top 5 y asigna puntos.')) return;
+                setCalculatingRanking(true);
+                try {
+                  await onCalculateRankingPolla();
+                  alert('✅ ¡Listo! Puntos de la Polla del Ranking asignados.');
+                } catch(e) {
+                  alert('Error al calcular. Intenta de nuevo.');
+                } finally {
+                  setCalculatingRanking(false);
+                }
+              }}
+              style={{width:'100%',padding:'14px',borderRadius:'10px',fontWeight:'700',fontSize:'14px',border:'none',cursor:calculatingRanking?'default':'pointer',
+                background:calculatingRanking?'rgba(255,255,255,0.06)':'linear-gradient(135deg,#7c3aed,#c026d3)',
+                color:calculatingRanking?'rgba(255,255,255,0.3)':'white'}}>
+              {calculatingRanking?'⏳ Calculando...':'🧮 Calcular resultados finales'}
+            </button>
+            {rankingCalculated && (
+              <button onClick={async()=>{
+                if(!confirm('¿Reabrir la Polla del Ranking para editar? Esto quita el estado finalizado.')) return;
+                await onReopenRankingPolla();
+                alert('✓ Reabierta.');
+              }}
+                style={{width:'100%',marginTop:'10px',padding:'10px',borderRadius:'10px',fontWeight:'600',fontSize:'13px',cursor:'pointer',
+                  background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.6)'}}>
+                🔄 Reabrir para editar
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -853,6 +993,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
             <li>• Aprueba solo usuarios que hayan pagado $15.000</li>
             <li>• Confirma los 16 clasificados solo cuando terminen todos los partidos de R32</li>
             <li>• Confirma los 8 clasificados solo cuando terminen todos los partidos de Octavos</li>
+            <li>• 👑 Polla Ranking: habilita solo a quienes paguen el monto adicional</li>
             <li>• Use 🔄 Recalcular en 📋 Verificar si hay diferencias</li>
           </ul>
         </div>

@@ -18,12 +18,15 @@ const getPhasePoints = (phase) => {
 };
 
 const useAppState = () => {
-  const [users,           setUsers]           = useState([]);
-  const [currentUser,     setCurrentUserState] = useState(null);
-  const [matches,         setMatches]         = useState(initialMatches);
-  const [reactions,       setReactions]       = useState({});
-  const [loading,         setLoading]         = useState(true);
-  const [groupsForceOpen, setGroupsForceOpen] = useState(false);
+  const [users,             setUsers]             = useState([]);
+  const [currentUser,       setCurrentUserState]  = useState(null);
+  const [matches,           setMatches]           = useState(initialMatches);
+  const [reactions,         setReactions]         = useState({});
+  const [loading,           setLoading]           = useState(true);
+  const [groupsForceOpen,   setGroupsForceOpen]   = useState(false);
+  const [rankingForceOpen,  setRankingForceOpen]  = useState(false);
+  const [rankingMonto,      setRankingMonto]      = useState('$10.000');
+  const [rankingCalculated, setRankingCalculated] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('polla_currentUser');
@@ -84,6 +87,23 @@ const useAppState = () => {
     return unsub;
   }, []);
 
+  // ✅ NUEVO: settings de la Polla del Ranking (forceOpen, monto, calculated)
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'rankingPolla'), (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setRankingForceOpen(d.forceOpen || false);
+        setRankingMonto(d.monto || '$10.000');
+        setRankingCalculated(d.calculated || false);
+      } else {
+        setRankingForceOpen(false);
+        setRankingMonto('$10.000');
+        setRankingCalculated(false);
+      }
+    });
+    return unsub;
+  }, []);
+
   const registerUser = async (name, nickname, avatar, championPrediction) => {
     const newUser = {
       id: Date.now().toString(),
@@ -104,7 +124,11 @@ const useAppState = () => {
         totalPredictions: 0,
       },
       isAdmin: users.length === 0,
-      badges: []
+      badges: [],
+      // ✅ NUEVO: campos Polla del Ranking
+      rankingPollaEnabled: false,
+      rankingPrediction: null,
+      rankingPollaPoints: 0
     };
     await setDoc(doc(db, 'users', newUser.id), newUser);
     return newUser;
@@ -161,9 +185,21 @@ const useAppState = () => {
     await updateDoc(userRef, { quartersPrediction: teamIds });
   };
 
-  // ✅ NUEVO: Guardar pronóstico 4 clasificados a semis
+  // ✅ Guardar pronóstico 4 clasificados a semis
   const saveSemisPrediction = async (userId, teamIds) => {
     await updateDoc(doc(db, 'users', userId), { semisPrediction: teamIds });
+  };
+
+  // ✅ NUEVO: Guardar pronóstico Top 5 de la Polla del Ranking
+  const saveRankingPrediction = async (userId, positions) => {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return;
+    const user = userSnap.data();
+    if (!user.rankingPollaEnabled && !user.isAdmin) throw new Error('No habilitado para Polla del Ranking');
+    await updateDoc(userRef, {
+      rankingPrediction: { positions, timestamp: Date.now() }
+    });
   };
 
   const saveGroupPrediction = async (userId, group, first, second) => {
@@ -252,7 +288,7 @@ const useAppState = () => {
       });
     }
 
-    // ✅ NUEVO: Puntos clasificados semis (+4 por cada acierto)
+    // ✅ Puntos clasificados semis (+5 por cada acierto)
     const semisPred = user.semisPrediction || [];
     const semisResults = user.semisResults || [];
     if (semisResults.length > 0 && semisPred.length > 0) {
@@ -325,7 +361,7 @@ const useAppState = () => {
     }
   };
 
-  // ✅ NUEVO: Confirmar 4 clasificados a semis y asignar puntos
+  // ✅ Confirmar 4 clasificados a semis y asignar puntos
   const updateSemisResults = async (teamIds) => {
     const usersSnap = await getDocs(collection(db, 'users'));
     const matchesSnap = await getDocs(collection(db, 'matches'));
@@ -403,13 +439,80 @@ const useAppState = () => {
     await setDoc(doc(db, 'settings', 'quarters'), { forceOpen: false });
   };
 
-  // ✅ NUEVO: Abrir/cerrar pronóstico semis
+  // ✅ Abrir/cerrar pronóstico semis
   const openSemisPredictions = async () => {
     await setDoc(doc(db, 'settings', 'semis'), { forceOpen: true });
   };
 
   const closeSemisPredictions = async () => {
     await setDoc(doc(db, 'settings', 'semis'), { forceOpen: false });
+  };
+
+  // ══════════ NUEVO: POLLA DEL RANKING ══════════
+
+  // Habilitar / deshabilitar participante (Dianita confirma pago)
+  const toggleRankingEnabled = async (userId, enabled) => {
+    await updateDoc(doc(db, 'users', userId), { rankingPollaEnabled: enabled });
+  };
+
+  // Abrir ventana de pronóstico
+  const openRankingPolla = async () => {
+    const ref = doc(db, 'settings', 'rankingPolla');
+    const snap = await getDoc(ref);
+    const cur = snap.exists() ? snap.data() : {};
+    await setDoc(ref, { ...cur, forceOpen: true, calculated: false });
+  };
+
+  // Cerrar ventana de pronóstico
+  const closeRankingPolla = async () => {
+    const ref = doc(db, 'settings', 'rankingPolla');
+    const snap = await getDoc(ref);
+    const cur = snap.exists() ? snap.data() : {};
+    await setDoc(ref, { ...cur, forceOpen: false });
+  };
+
+  // Guardar el monto configurable
+  const saveRankingMonto = async (monto) => {
+    const ref = doc(db, 'settings', 'rankingPolla');
+    const snap = await getDoc(ref);
+    const cur = snap.exists() ? snap.data() : {};
+    await setDoc(ref, { ...cur, monto });
+  };
+
+  // Calcular resultados finales de la Polla del Ranking:
+  // congela el Top 5 real y asigna rankingPollaPoints a cada habilitado.
+  const calculateRankingPolla = async () => {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    const allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Ranking real = habilitados ordenados por points (ranking general)
+    const enabled = allUsers.filter(u => u.rankingPollaEnabled);
+    const realRanking = [...enabled].sort((a,b) => (b.points||0) - (a.points||0));
+    const realTop5 = realRanking.slice(0,5).map(u => u.id);
+
+    for (const u of enabled) {
+      const positions = u.rankingPrediction?.positions || [];
+      let pts = 0;
+      positions.forEach((uid, idx) => {
+        if (realTop5[idx] === uid) pts += 5;          // posición exacta
+        else if (realTop5.includes(uid)) pts += 2;    // en top 5, otra posición
+      });
+      await updateDoc(doc(db, 'users', u.id), { rankingPollaPoints: pts });
+    }
+
+    // Marcar como calculado y cerrar ventana
+    const ref = doc(db, 'settings', 'rankingPolla');
+    const snap = await getDoc(ref);
+    const cur = snap.exists() ? snap.data() : {};
+    await setDoc(ref, { ...cur, forceOpen: false, calculated: true, realTop5 });
+  };
+
+  // Reabrir para re-editar (quita el estado calculado)
+  const reopenRankingPolla = async () => {
+    const ref = doc(db, 'settings', 'rankingPolla');
+    const snap = await getDoc(ref);
+    const cur = snap.exists() ? snap.data() : {};
+    await setDoc(ref, { ...cur, calculated: false, forceOpen: true });
   };
 
   const deleteUser = async (userId) => {
@@ -487,7 +590,12 @@ const useAppState = () => {
     openSemisPredictions, closeSemisPredictions,
     addReaction, removeReaction, deleteUser,
     approveUser, rejectUser, resetAllUsers,
-    openAllGroups, closeAllGroups, groupsForceOpen
+    openAllGroups, closeAllGroups, groupsForceOpen,
+    // ✅ NUEVO: Polla del Ranking
+    saveRankingPrediction, toggleRankingEnabled,
+    openRankingPolla, closeRankingPolla, saveRankingMonto,
+    calculateRankingPolla, reopenRankingPolla,
+    rankingForceOpen, rankingMonto, rankingCalculated
   };
 };
 
