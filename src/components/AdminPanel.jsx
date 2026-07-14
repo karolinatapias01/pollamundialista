@@ -40,6 +40,7 @@ const getPhasePoints = (phase) => {
     case 'round16':  return { correct: 3, exact: 9 };
     case 'quarters': return { correct: 4, exact: 12 };
     case 'semis':    return { correct: 5, exact: 15 };
+    case 'semifinal': return { correct: 5, exact: 15 };
     case 'third':    return { correct: 6, exact: 18 };
     case 'final':    return { correct: 7, exact: 21 };
     default:         return { correct: 1, exact: 4 };
@@ -90,7 +91,7 @@ const calcUserPoints = (user, matches) => {
   return { matchPts, groupPts, round16Pts, quartersPts, championPts, total: matchPts + groupPts + round16Pts + quartersPts + championPts };
 };
 
-const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onUpdateQuartersResults, onRecalculateAll, onOpenRound16, onCloseRound16, onOpenQuarters, onCloseQuarters, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups, onToggleRankingEnabled, onOpenRankingPolla, onCloseRankingPolla, onSaveRankingMonto, onCalculateRankingPolla, onReopenRankingPolla, rankingForceOpen, rankingMonto, rankingCalculated }) => {
+const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateChampion, onUpdateRound16Results, onUpdateQuartersResults,onUpdateSemisResults, onRecalculateAll, onOpenRound16, onCloseRound16, onOpenQuarters, onCloseQuarters, users, onDeleteUser, onApproveUser, onRejectUser, onResetAll, onOpenAllGroups, onCloseAllGroups, onToggleRankingEnabled, onOpenRankingPolla, onCloseRankingPolla, onSaveRankingMonto, onCalculateRankingPolla, onReopenRankingPolla, rankingForceOpen, rankingMonto, rankingCalculated }) => {
   const [activeSection, setActiveSection] = useState('pending');
   const [editingMatch, setEditingMatch] = useState(null);
   const [homeScore, setHomeScore] = useState('');
@@ -115,6 +116,9 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
   const [montoInput, setMontoInput] = useState(rankingMonto || '$10.000');
   const [loadingRanking, setLoadingRanking] = useState(false);
   const [calculatingRanking, setCalculatingRanking] = useState(false);
+  const [semisSel2, setSemisSel2] = useState([]);
+  const [semisSaved2, setSemisSaved2] = useState(false);
+  const [savingSemis2, setSavingSemis2] = useState(false);
 
   const pendingUsers = users.filter(u => !u.approved && !u.isAdmin);
   const approvedUsers = users.filter(u => u.approved && !u.isAdmin);
@@ -225,6 +229,7 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
         {sectionBtn('groups','Clasificados','📊')}
         {sectionBtn('round16results','16 Clasif.','🔥')}
         {sectionBtn('quartersresults','8 Clasif.','💪')}
+        {sectionBtn('semisresults','4 Semis','⚔️')}
         {sectionBtn('champion','Campeón','🏆')}
         {sectionBtn('rankingpolla','Polla Ranking','👑')}
         {sectionBtn('verify','Verificar','📋')}
@@ -641,6 +646,78 @@ const AdminPanel = ({ matches, onUpdateResult, onUpdateGroupResult, onUpdateCham
                   background:quartersSel2.length===8?'linear-gradient(135deg,#2563eb,#3b82f6)':'rgba(255,255,255,0.06)',
                   color:quartersSel2.length===8?'white':'rgba(255,255,255,0.3)'}}>
                 {savingQrt2?'⏳ Asignando puntos...':quartersSel2.length===8?'💪 Confirmar 8 clasificados':'Selecciona 8 equipos'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 4 CLASIFICADOS A SEMIS */}
+      {activeSection==='semisresults' && (
+        <div style={{...card,padding:'20px'}}>
+          <div style={{marginBottom:'16px'}}>
+            <h3 style={{fontSize:'15px',fontWeight:'700',color:'white',marginBottom:'4px'}}>⚔️ 4 clasificados a Semifinales</h3>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)'}}>
+              Confirma los 4 equipos que pasaron Cuartos. Suma +5 pts por cada acierto.
+            </p>
+          </div>
+          {semisSaved2 ? (
+            <div style={{padding:'16px',borderRadius:'12px',background:'rgba(168,85,247,0.1)',border:'1px solid rgba(168,85,247,0.3)',textAlign:'center'}}>
+              <div style={{fontSize:'32px',marginBottom:'8px'}}>⚔️</div>
+              <div style={{fontSize:'14px',fontWeight:'700',color:'#c084fc'}}>¡4 clasificados registrados!</div>
+              <div style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',marginTop:'6px'}}>Los puntos ya fueron asignados</div>
+            </div>
+          ) : (
+            <>
+              <div style={{padding:'12px',borderRadius:'10px',background:'rgba(168,85,247,0.06)',border:'1px solid rgba(168,85,247,0.15)',marginBottom:'14px'}}>
+                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',lineHeight:'1.6'}}>
+                  ⚠️ <strong style={{color:'white'}}>Solo hazlo una vez</strong> cuando terminen todos los Cuartos.<br/>
+                  Seleccionados: <span style={{color:semisSel2.length===4?'#4ade80':'#c084fc',fontWeight:'700'}}>{semisSel2.length}/4</span>
+                </div>
+              </div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'14px'}}>
+                {['fra','mar','esp','bel','eng','nor','arg','sui'].map(teamId => {
+                  const team = getTeamById(teamId);
+                  const isSelected = semisSel2.includes(teamId);
+                  return (
+                    <button key={teamId} onClick={()=>{
+                      setSemisSel2(prev => {
+                        if (prev.includes(teamId)) return prev.filter(t=>t!==teamId);
+                        if (prev.length >= 4) { alert('Ya seleccionaste 4 equipos'); return prev; }
+                        return [...prev, teamId];
+                      });
+                    }}
+                      style={{display:'flex',alignItems:'center',gap:'6px',padding:'7px 12px',borderRadius:'8px',cursor:'pointer',
+                        background:isSelected?'rgba(168,85,247,0.15)':'rgba(255,255,255,0.04)',
+                        border:isSelected?'1px solid rgba(168,85,247,0.4)':'1px solid rgba(255,255,255,0.08)',
+                        color:isSelected?'#c084fc':'rgba(255,255,255,0.6)'}}>
+                      <Flag code={team?.flagCode} size={20}/>
+                      <span style={{fontSize:'12px',fontWeight:isSelected?'700':'400'}}>{team?.name||teamId}</span>
+                      {isSelected && <span style={{fontSize:'11px'}}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                disabled={savingSemis2 || semisSel2.length !== 4}
+                onClick={async()=>{
+                  if(semisSel2.length !== 4){ alert('Selecciona exactamente 4 equipos'); return; }
+                  if(!confirm('¿Confirmas estos 4 equipos como clasificados a Semifinales?')) return;
+                  setSavingSemis2(true);
+                  try {
+                    await onUpdateSemisResults(semisSel2);
+                    setSemisSaved2(true);
+                    alert('✅ ¡Listo! Los puntos fueron asignados.');
+                  } catch(e) {
+                    alert('Error al guardar. Intente de nuevo.');
+                  } finally {
+                    setSavingSemis2(false);
+                  }
+                }}
+                style={{width:'100%',padding:'14px',borderRadius:'10px',fontWeight:'700',fontSize:'14px',cursor:semisSel2.length===4?'pointer':'default',border:'none',
+                  background:semisSel2.length===4?'linear-gradient(135deg,#7c3aed,#c026d3)':'rgba(255,255,255,0.06)',
+                  color:semisSel2.length===4?'white':'rgba(255,255,255,0.3)'}}>
+                {savingSemis2?'⏳ Asignando puntos...':semisSel2.length===4?'⚔️ Confirmar 4 clasificados':'Selecciona 4 equipos'}
               </button>
             </>
           )}

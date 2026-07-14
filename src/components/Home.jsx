@@ -42,6 +42,7 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
   const [showGroupsDetail, setShowGroupsDetail] = useState(false);
   const [showR32Detail, setShowR32Detail] = useState(false);
   const [showQrtDetail, setShowQrtDetail] = useState(false);
+  const [showSemisDetail, setShowSemisDetail] = useState(false);
 
   const liveUser = users.find(u => u.id === currentUser.id) || currentUser;
 
@@ -139,7 +140,13 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
     if (!hasQrtResults || qrtPred.length === 0) return 0;
     return qrtResults.filter(t => qrtPred.includes(t)).length * 2;
   }, [qrtResults, qrtPred, hasQrtResults]);
-
+const semResults = liveUser.semisResults || [];
+  const semPred = liveUser.quartersPrediction || [];
+  const hasSemResults = semResults.length > 0;
+  const mySemPoints = useMemo(() => {
+    if (!hasSemResults || semPred.length === 0) return 0;
+    return semResults.filter(t => semPred.includes(t)).length * 5;
+  }, [semResults, semPred, hasSemResults]);
   const s = (key) => liveUser?.stats?.[key] ?? 0;
 
   return (
@@ -434,6 +441,53 @@ const Home = ({ users, currentUser, matches, onNavigate }) => {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasSemResults && (
+        <div style={{borderRadius:'14px',background:'rgba(168,85,247,0.08)',border:'1px solid rgba(168,85,247,0.25)',overflow:'hidden'}}>
+          <div style={{padding:'14px 16px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontSize:'13px',fontWeight:'700',color:'#c084fc',marginBottom:'3px'}}>
+                  ⚔️ Puntos clasificados Semis asignados
+                </div>
+                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.45)'}}>
+                  {semResults.length} equipos confirmados · Tú obtuviste{' '}
+                  <span style={{color:'#c084fc',fontWeight:'700'}}>{mySemPoints} pts</span> de clasificados Semis
+                  {semPred.length > 0 && (
+                    <span style={{color:'rgba(255,255,255,0.35)',marginLeft:'6px'}}>
+                      ({semResults.filter(t => semPred.includes(t)).length}/{semResults.length} aciertos)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button onClick={()=>setShowSemisDetail(!showSemisDetail)}
+                style={{padding:'6px 12px',borderRadius:'8px',background:'rgba(168,85,247,0.15)',border:'1px solid rgba(168,85,247,0.3)',color:'#c084fc',fontSize:'12px',fontWeight:'600',cursor:'pointer',whiteSpace:'nowrap',marginLeft:'10px'}}>
+                {showSemisDetail ? 'Ocultar' : 'Ver detalle'}
+              </button>
+            </div>
+          </div>
+          {showSemisDetail && (
+            <div style={{borderTop:'1px solid rgba(168,85,247,0.15)',padding:'12px 16px'}}>
+              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'10px'}}>Tus equipos seleccionados:</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
+                {semPred.length > 0 ? semPred.map(teamId => {
+                  const team = getTeamById(teamId);
+                  const isCorrect = semResults.includes(teamId);
+                  return (
+                    <div key={teamId} style={{display:'flex',alignItems:'center',gap:'4px',padding:'5px 10px',borderRadius:'8px',
+                      background:isCorrect?'rgba(74,222,128,0.15)':'rgba(239,68,68,0.1)',
+                      border:isCorrect?'1px solid rgba(74,222,128,0.3)':'1px solid rgba(239,68,68,0.2)'}}>
+                      <Flag code={team?.flagCode} size={16}/>
+                      <span style={{fontSize:'11px',color:isCorrect?'#4ade80':'#f87171'}}>{team?.name||teamId}</span>
+                      <span style={{fontSize:'10px'}}>{isCorrect?'✓':'✗'}</span>
+                    </div>
+                  );
+                }) : <span style={{fontSize:'12px',color:'rgba(255,255,255,0.3)'}}>No pronosticaste</span>}
               </div>
             </div>
           )}

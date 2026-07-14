@@ -81,7 +81,7 @@ function App() {
     currentUser, users, matches, reactions, loading,
     setCurrentUser, registerUser, makePrediction,
     saveGroupPrediction, saveRound16Prediction, saveQuartersPrediction, saveSemisPrediction,
-    updateMatchResult, updateRound16Results, updateQuartersResults,
+    updateMatchResult, updateRound16Results, updateQuartersResults, updateSemisResults,
     updateGroupResult, updateChampion,
     recalculateAllPoints,
     openRound16Predictions, closeRound16Predictions,
@@ -274,7 +274,7 @@ function App() {
         {activeTab==='rankingpolla' && <RankingPolla currentUser={currentUser} users={users} onSaveRankingPrediction={saveRankingPrediction} rankingForceOpen={rankingForceOpen} rankingMonto={rankingMonto} rankingCalculated={rankingCalculated}/>}
         {activeTab==='news'    && <News/>}
         {activeTab==='history' && <History users={users} currentUser={currentUser} matches={matches}/>}
-        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} onUpdateQuartersResults={updateQuartersResults} onRecalculateAll={recalculateAllPoints} onOpenRound16={openRound16Predictions} onCloseRound16={closeRound16Predictions} onOpenQuarters={openQuartersPredictions} onCloseQuarters={closeQuartersPredictions} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups} onToggleRankingEnabled={toggleRankingEnabled} onOpenRankingPolla={openRankingPolla} onCloseRankingPolla={closeRankingPolla} onSaveRankingMonto={saveRankingMonto} onCalculateRankingPolla={calculateRankingPolla} onReopenRankingPolla={reopenRankingPolla} rankingForceOpen={rankingForceOpen} rankingMonto={rankingMonto} rankingCalculated={rankingCalculated}/>}
+        {activeTab==='admin'   && currentUser.isAdmin && <AdminPanel matches={matches} onUpdateResult={updateMatchResult} onUpdateGroupResult={updateGroupResult} onUpdateChampion={updateChampion} onUpdateRound16Results={updateRound16Results} onUpdateQuartersResults={updateQuartersResults} onUpdateSemisResults={updateSemisResults} onRecalculateAll={recalculateAllPoints} onOpenRound16={openRound16Predictions} onCloseRound16={closeRound16Predictions} onOpenQuarters={openQuartersPredictions} onCloseQuarters={closeQuartersPredictions} users={users} onDeleteUser={deleteUser} onApproveUser={approveUser} onRejectUser={rejectUser} onResetAll={resetAllUsers} onOpenAllGroups={openAllGroups} onCloseAllGroups={closeAllGroups} onToggleRankingEnabled={toggleRankingEnabled} onOpenRankingPolla={openRankingPolla} onCloseRankingPolla={closeRankingPolla} onSaveRankingMonto={saveRankingMonto} onCalculateRankingPolla={calculateRankingPolla} onReopenRankingPolla={reopenRankingPolla} rankingForceOpen={rankingForceOpen} rankingMonto={rankingMonto} rankingCalculated={rankingCalculated}/>}
       </main>
 
       <button onClick={()=>setShowRules(true)}

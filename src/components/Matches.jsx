@@ -34,6 +34,7 @@ const getPhaseLabel = (phase) => {
     case 'round16':  return { correct: 3, exact: 9 };
     case 'quarters': return { correct: 4, exact: 12 };
     case 'semis':    return { correct: 5, exact: 15 };
+   case 'semifinal': return { correct: 5, exact: 15 };
     case 'third':    return { correct: 6, exact: 18 };
     case 'final':    return { correct: 7, exact: 21 };
     default:         return { correct: 1, exact: 4 };
@@ -142,12 +143,14 @@ const Matches = ({ matches, currentUser, onMakePrediction, onSaveRound16Predicti
     return unsub;
   }, []);
 
- const phases = [
-  { id:'groups',   label:'⚽ Grupos'  },
-  { id:'round16',  label:'🔥 R. de 32' },
-  { id:'quarters', label:'💪 Octavos' },
-  { id:'semis',    label:'⚔️ Cuartos' },
-  { id:'final',    label:'🏆 Final'   },
+const phases = [
+  { id:'groups',    label:'⚽ Grupos'  },
+  { id:'round16',   label:'🔥 R. de 32' },
+  { id:'quarters',  label:'💪 Octavos' },
+  { id:'semis',     label:'⚔️ Cuartos' },
+  { id:'semifinal', label:'🏅 Semis'   },
+  { id:'third',     label:'🥉 3er'     },
+  { id:'final',     label:'🏆 Final'   },
 ];
   const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 

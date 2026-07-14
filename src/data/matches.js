@@ -128,17 +128,17 @@ export const matches = [
   { id: 96,  phase: 'quarters', homeTeam: 'sui', awayTeam: 'col', date: '2026-07-07T19:00:00-05:00', venue: 'Vancouver',    status: 'pending' },
 
   // ── CUARTOS ──
-  { id: 97,  phase: 'semis', homeTeam: null, awayTeam: null, date: '2026-07-09T19:00:00-05:00', venue: 'Boston',        status: 'pending' },
-  { id: 98,  phase: 'semis', homeTeam: null, awayTeam: null, date: '2026-07-10T19:00:00-05:00', venue: 'Los Ángeles',   status: 'pending' },
-  { id: 99,  phase: 'semis', homeTeam: null, awayTeam: null, date: '2026-07-11T15:00:00-05:00', venue: 'Miami',         status: 'pending' },
-  { id: 100, phase: 'semis', homeTeam: null, awayTeam: null, date: '2026-07-11T19:00:00-05:00', venue: 'Kansas City',   status: 'pending' },
+  { id: 97,  phase: 'semis', homeTeam: 'fra', awayTeam: 'mar', date: '2026-07-09T19:00:00-05:00', venue: 'Boston',        status: 'pending' },
+  { id: 98,  phase: 'semis', homeTeam: 'esp', awayTeam: 'bel', date: '2026-07-10T19:00:00-05:00', venue: 'Los Ángeles',   status: 'pending' },
+  { id: 99,  phase: 'semis', homeTeam: 'eng', awayTeam: 'nor', date: '2026-07-11T15:00:00-05:00', venue: 'Miami',         status: 'pending' },
+  { id: 100, phase: 'semis', homeTeam: 'arg', awayTeam: 'sui', date: '2026-07-11T19:00:00-05:00', venue: 'Kansas City',   status: 'pending' },
 
   // ── SEMIFINALES ──
-  { id: 101, phase: 'semis', homeTeam: null, awayTeam: null, date: '2026-07-14T19:00:00-05:00', venue: 'Dallas',        status: 'pending' },
-  { id: 102, phase: 'semis', homeTeam: null, awayTeam: null, date: '2026-07-15T19:00:00-05:00', venue: 'Atlanta',       status: 'pending' },
+  { id: 101, phase: 'semifinal', homeTeam: 'fra', awayTeam: 'esp', date: '2026-07-14T19:00:00-05:00', venue: 'Dallas',   status: 'pending' },
+  { id: 102, phase: 'semifinal', homeTeam: 'arg', awayTeam: 'eng', date: '2026-07-15T19:00:00-05:00', venue: 'Atlanta',  status: 'pending' },
 
   // ── TERCER PUESTO ──
-  { id: 103, phase: 'third',  homeTeam: null, awayTeam: null, date: '2026-07-18T15:00:00-05:00', venue: 'Miami',         status: 'pending' },
+  { id: 103, phase: 'third', homeTeam: null, awayTeam: null, date: '2026-07-18T15:00:00-05:00', venue: 'Miami',          status: 'pending' },
 
   // ── FINAL ──
   { id: 104, phase: 'final',  homeTeam: null, awayTeam: null, date: '2026-07-19T15:00:00-05:00', venue: 'Nueva York',    status: 'pending' },
